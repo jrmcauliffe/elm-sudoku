@@ -4,15 +4,17 @@ import Array exposing (..)
 import Browser
 import Dict exposing (..)
 import Html exposing (Html)
+import Set exposing (..)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 
-type alias Position = (Int, Int)
+type alias Position =
+    ( Int, Int )
 
-type alias Value = Int
 
-
+type alias Value =
+    Int
 
 
 dimToXY : Int -> Int -> ( Int, Int )
@@ -20,9 +22,53 @@ dimToXY dim index =
     ( modBy (dim * dim) (index - 1) + 1, ((index - 1) // (dim * dim)) + 1 )
 
 
+allNums : Int -> List Int
+allNums dim =
+    List.range 1 (dim * dim)
+
+
+
+-- List of missing values from a point
+
+
+missing : Board -> Position -> List Int
+missing b p =
+    let
+        row =
+            p |> Tuple.first
+
+        col =
+            p |> Tuple.second
+
+        rowVals =
+            getRow b row |> Set.fromList
+
+        colVals =
+            getCol b col |> Set.fromList
+
+        sqVals =
+            getSq b row col |> Set.fromList
+    in
+    rowVals |> Set.union colVals |> Set.union sqVals |> Set.diff (allNums b.dim |> Set.fromList) |> Set.toList
+
+
+allPoints : Int -> List Position
+allPoints dim =
+    let
+        nums =
+            List.range 1 (dim * dim)
+    in
+    nums |> List.concatMap (\rr -> nums |> List.map (\cc -> ( rr, cc )))
+    
+ -- initialModel.b |> unfilled |> List.map (\p -> (p, (missing initialModel.b p))) |> List.sortBy (\(x,y) -> y |> List.length)
 
 -- TODO Error checking
 -- Simple way to enter existing puzzles just enter row by row, zero for unknown
+
+
+unfilled : Board -> List Position
+unfilled b =
+    b.contents |> Dict.keys |> Set.fromList |> Set.diff (allPoints b.dim |> Set.fromList) |> Set.toList
 
 
 contentsFromOrderedList : Int -> List Int -> Dict Position Value
@@ -41,8 +87,9 @@ contentsFromOrderedList dim l =
             (\p ->
                 case Tuple.first p of
                     ( x, y ) ->
-                        (( x, y), (Tuple.second p))
-            ) |> Dict.fromList
+                        ( ( x, y ), Tuple.second p )
+            )
+        |> Dict.fromList
 
 
 
@@ -291,14 +338,19 @@ getCol b r =
     b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.second) == r) |> Dict.values
 
 
-
-
 getSq : Board -> Int -> Int -> List Int
 getSq b r c =
     let
-      base = (\i -> ((i - 1) // b.dim) * b.dim)
-      rowNums = List.range 1 b.dim |> List.map((+) (base r))
-      colNums = List.range 1 b.dim |> List.map((+) (base c))
-      points =  colNums |> List.concatMap(\cc -> rowNums |> List.map(\rr -> (rr, cc)))
+        base =
+            \i -> ((i - 1) // b.dim) * b.dim
+
+        rowNums =
+            List.range 1 b.dim |> List.map ((+) (base r))
+
+        colNums =
+            List.range 1 b.dim |> List.map ((+) (base c))
+
+        points =
+            colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
     in
-       points |> List.filterMap (\v -> Dict.get v b.contents)
+    points |> List.filterMap (\v -> Dict.get v b.contents)
