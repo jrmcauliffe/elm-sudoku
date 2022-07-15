@@ -2,17 +2,17 @@ module Main exposing (..)
 
 import Array exposing (..)
 import Browser
+import Dict exposing (..)
 import Html exposing (Html)
 import Svg exposing (..)
 import Svg.Attributes exposing (..)
 
 
-type alias Square =
-    -- Zero based indexing
-    { x : Int
-    , y : Int
-    , value : Int
-    }
+type alias Position = (Int, Int)
+
+type alias Value = Int
+
+
 
 
 dimToXY : Int -> Int -> ( Int, Int )
@@ -25,7 +25,7 @@ dimToXY dim index =
 -- Simple way to enter existing puzzles just enter row by row, zero for unknown
 
 
-contentsFromOrderedList : Int -> List Int -> List Square
+contentsFromOrderedList : Int -> List Int -> Dict Position Value
 contentsFromOrderedList dim l =
     let
         --
@@ -41,8 +41,8 @@ contentsFromOrderedList dim l =
             (\p ->
                 case Tuple.first p of
                     ( x, y ) ->
-                        Square x y (Tuple.second p)
-            )
+                        (( x, y), (Tuple.second p))
+            ) |> Dict.fromList
 
 
 
@@ -136,7 +136,7 @@ puzzle1 =
 
 type alias Board =
     { dim : Int
-    , contents : List Square
+    , contents : Dict Position Value
     }
 
 
@@ -172,31 +172,32 @@ type Msg
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        _ -> (model, Cmd.none)
+        _ ->
+            ( model, Cmd.none )
 
 
-renderNum : Square -> Svg Msg
-renderNum sq =
+renderNum : Position -> Value -> Svg Msg
+renderNum p v =
     let
-        xOffset =
+        colOffset =
             15
 
-        yOffset =
+        rowOffset =
             38
 
         row =
-            (sq.x - 1) * 50 + xOffset |> String.fromInt
+            ((p |> Tuple.first) - 1) * 50 + rowOffset |> String.fromInt
 
         col =
-            (sq.y - 1) * 50 + yOffset |> String.fromInt
+            ((p |> Tuple.second) - 1) * 50 + colOffset |> String.fromInt
     in
     text_
-        [ x row
-        , y col
+        [ x col
+        , y row
         , fill "black"
         , Svg.Attributes.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
         ]
-        [ text (String.fromInt sq.value) ]
+        [ text (String.fromInt v) ]
 
 
 myLines : Int -> Int -> Int -> List (Svg Msg)
@@ -254,7 +255,7 @@ dispBoard b =
         (List.range 1 (b.dim * b.dim)
             |> List.concatMap
                 (myLines boxSize b.dim)
-            |> List.append (b.contents |> List.map renderNum)
+            |> List.append ((b.contents |> Dict.map renderNum) |> Dict.values)
             |> List.append
                 [ rect
                     [ x "0"
@@ -279,3 +280,25 @@ view model =
         ]
         [ model.b |> dispBoard ]
 
+
+getRow : Board -> Int -> List Int
+getRow b r =
+    b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.first) == r) |> Dict.values
+
+
+getCol : Board -> Int -> List Int
+getCol b r =
+    b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.second) == r) |> Dict.values
+
+
+
+
+getSq : Board -> Int -> Int -> List Int
+getSq b r c =
+    let
+      base = (\i -> ((i - 1) // b.dim) * b.dim)
+      rowNums = List.range 1 b.dim |> List.map((+) (base r))
+      colNums = List.range 1 b.dim |> List.map((+) (base c))
+      points =  colNums |> List.concatMap(\cc -> rowNums |> List.map(\rr -> (rr, cc)))
+    in
+       points |> List.filterMap (\v -> Dict.get v b.contents)
