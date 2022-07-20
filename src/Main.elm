@@ -3,6 +3,8 @@ module Main exposing (..)
 import Array exposing (..)
 import Browser
 import Dict exposing (..)
+import Element exposing (Element)
+import Element.Input exposing (..)
 import Html exposing (Html)
 import Set exposing (..)
 import Svg exposing (..)
@@ -59,9 +61,10 @@ allPoints dim =
             List.range 1 (dim * dim)
     in
     nums |> List.concatMap (\rr -> nums |> List.map (\cc -> ( rr, cc )))
-    
- -- initialModel.b |> unfilled |> List.map (\p -> (p, (missing initialModel.b p))) |> List.sortBy (\(x,y) -> y |> List.length)
 
+
+
+-- initialModel.b |> unfilled |> List.map (\p -> (p, (missing initialModel.b p))) |> List.sortBy (\(x,y) -> y |> List.length)
 -- TODO Error checking
 -- Simple way to enter existing puzzles just enter row by row, zero for unknown
 
@@ -218,7 +221,11 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let oldB = model.b
+        newB = {oldB | contents = Dict.empty}
+    in
     case msg of
+        Increment -> ( { model | b = newB }, Cmd.none)
         _ ->
             ( model, Cmd.none )
 
@@ -244,7 +251,7 @@ renderNum p v =
         , fill "black"
         , Svg.Attributes.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
         ]
-        [ text (String.fromInt v) ]
+        [ Svg.text (String.fromInt v) ]
 
 
 myLines : Int -> Int -> Int -> List (Svg Msg)
@@ -287,7 +294,7 @@ myLines size dim l =
     ]
 
 
-dispBoard : Board -> Svg Msg
+dispBoard : Board -> Element Msg
 dispBoard b =
     let
         -- edge of box in pixels
@@ -297,37 +304,42 @@ dispBoard b =
         -- edge of board in pixels
         boardSize =
             b.dim * b.dim * boxSize
-    in
-    g [ transform "translate(100,100)" ]
-        (List.range 1 (b.dim * b.dim)
-            |> List.concatMap
-                (myLines boxSize b.dim)
-            |> List.append ((b.contents |> Dict.map renderNum) |> Dict.values)
-            |> List.append
-                [ rect
-                    [ x "0"
-                    , y "0"
-                    , boardSize |> String.fromInt |> width
-                    , boardSize |> String.fromInt |> height
-                    , fill "white"
-                    , stroke "black"
-                    , strokeWidth "4"
+
+        grp =
+            List.range 1 (b.dim * b.dim)
+                |> List.concatMap
+                    (myLines boxSize b.dim)
+                |> List.append ((b.contents |> Dict.map renderNum) |> Dict.values)
+                |> List.append
+                    [ rect
+                        [ x "0"
+                        , y "0"
+                        , boardSize |> String.fromInt |> width
+                        , boardSize |> String.fromInt |> height
+                        , fill "white"
+                        , stroke "black"
+                        , strokeWidth "4"
+                        ]
+                        []
                     ]
-                    []
-                ]
-        )
+                |> g [ transform "translate(50,50)" ]
+    in
+    [ grp ]
+        |> svg
+            [ width "800"
+            , height "800"
+            , viewBox "0 0 800 800"
+            ]
+        |> Element.html
 
 
 view : Model -> Html Msg
 view model =
-    svg
-        [ width "1500"
-        , height "1500"
-        , viewBox "0 0 1500 1500"
-        ]
-        [ model.b |> dispBoard ]
+    Element.column [ Element.explain Debug.todo, Element.width Element.fill, Element.height Element.fill, Element.spacing 5 ]
+        [ Element.row [] [ model.b |> dispBoard ], Element.row [Element.centerX] [ Element.el [] myButton ] ]
+        |> Element.layout []
 
-
+myButton = Element.Input.button [] {onPress = Just Increment, label = Element.text "Click Me"}
 getRow : Board -> Int -> List Int
 getRow b r =
     b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.first) == r) |> Dict.values
