@@ -19,9 +19,9 @@ type alias Value =
     Int
 
 
-dimToXY : Int -> Int -> ( Int, Int )
-dimToXY dim index =
-    ( modBy (dim * dim) (index - 1) + 1, ((index - 1) // (dim * dim)) + 1 )
+dimToRC : Int -> Int -> ( Int, Int )
+dimToRC dim index =
+    ( ((index - 1) // (dim * dim)) + 1, modBy (dim * dim) (index - 1) + 1 )
 
 
 allNums : Int -> List Int
@@ -49,7 +49,7 @@ missing b p =
             getCol b col |> Set.fromList
 
         sqVals =
-            getSq b row col |> Set.fromList
+            getSq b (row, col) |> Set.fromList
     in
     rowVals |> Set.union colVals |> Set.union sqVals |> Set.diff (allNums b.dim |> Set.fromList) |> Set.toList
 
@@ -79,7 +79,7 @@ contentsFromOrderedList dim l =
     let
         --
         idx =
-            List.length l |> List.range 1 |> List.map (dimToXY dim)
+            List.length l |> List.range 1 |> List.map (dimToRC dim)
 
         pairs =
             List.map2 (\a -> \b -> ( a, b )) idx l
@@ -221,11 +221,14 @@ type Msg
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let oldB = model.b
-        newB = {oldB | contents = Dict.empty}
+    let
+        oldB =
+            model.b
     in
     case msg of
-        Increment -> ( { model | b = newB }, Cmd.none)
+        Increment ->
+            ( { model | b = solve oldB }, Cmd.none )
+
         _ ->
             ( model, Cmd.none )
 
@@ -336,10 +339,14 @@ dispBoard b =
 view : Model -> Html Msg
 view model =
     Element.column [ Element.explain Debug.todo, Element.width Element.fill, Element.height Element.fill, Element.spacing 5 ]
-        [ Element.row [] [ model.b |> dispBoard ], Element.row [Element.centerX] [ Element.el [] myButton ] ]
+        [ Element.row [] [ model.b |> dispBoard ], Element.row [ Element.centerX ] [ Element.el [] myButton ] ]
         |> Element.layout []
 
-myButton = Element.Input.button [] {onPress = Just Increment, label = Element.text "Click Me"}
+
+myButton =
+    Element.Input.button [] { onPress = Just Increment, label = Element.text "Click Me" }
+
+
 getRow : Board -> Int -> List Int
 getRow b r =
     b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.first) == r) |> Dict.values
@@ -350,8 +357,8 @@ getCol b r =
     b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.second) == r) |> Dict.values
 
 
-getSq : Board -> Int -> Int -> List Int
-getSq b r c =
+getSq : Board -> Position -> List Int
+getSq b ( r, c ) =
     let
         base =
             \i -> ((i - 1) // b.dim) * b.dim
@@ -366,3 +373,49 @@ getSq b r c =
             colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
     in
     points |> List.filterMap (\v -> Dict.get v b.contents)
+
+
+remaining : Board -> Set Position
+remaining b =
+    let
+        d =
+            List.range 1 (b.dim * b.dim)
+
+        allKeys : Set Position
+        allKeys =
+            d |> List.concatMap (\x -> d |> List.map (\y -> ( x, y ))) |> Set.fromList
+
+        usedKeys : Set Position
+        usedKeys =
+            b.contents |> Dict.keys |> Set.fromList
+    in
+    usedKeys |> Set.diff allKeys
+
+
+unSolved : Position -> Board -> Set Int
+unSolved ( r, c ) b =
+    let
+        existingVals = getSq b ( r, c ) |> List.append (getRow b r) |> List.append (getCol b c) |> Set.fromList
+        allVals = List.range 1 (b.dim * b.dim) |> Set.fromList
+    in
+    existingVals |> Set.diff allVals
+
+
+updateBoard : Board -> Position -> Int -> Board
+updateBoard b p i =
+    let
+        vals = b.contents |> Dict.insert p i
+    in
+    { b | contents = vals }
+
+solve : Board -> Board
+solve b =
+    let
+        r =
+            b |> remaining
+        lowPos =
+            r |> Set.toList |> List.map (\p -> ( p, unSolved p b |> Set.toList )) |> List.sortBy (\(x,y) -> y |> List.length) |> List.head
+    in
+    case lowPos of
+        Just (pnt, val) -> updateBoard b pnt (val |> List.head |> Maybe.withDefault 0)
+        Nothing -> b
