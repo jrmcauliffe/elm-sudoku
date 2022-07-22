@@ -1,13 +1,23 @@
 module Board exposing (Board, Msg(..), importBoard, renderBoard, solveBoard)
 
-import Dict exposing (..)
+import Dict
 import Html exposing (Html)
-import Set exposing (..)
-import Svg exposing (..)
-import Svg.Attributes exposing (..)
+import Set
+import Svg
+import Svg.Attributes as Att
+
+type Msg
+    = SolveMsg
+
+type alias Position =
+    ( Int, Int )
 
 
-importBoard : Int -> List Int -> Dict Position Value
+type alias Value =
+    Int
+
+
+importBoard : Int -> List Int -> Dict.Dict Position Value
 importBoard dim l =
     let
         --
@@ -28,88 +38,28 @@ importBoard dim l =
         |> Dict.fromList
 
 
+
 dimToRC : Int -> Int -> ( Int, Int )
 dimToRC dim index =
     ( ((index - 1) // (dim * dim)) + 1, modBy (dim * dim) (index - 1) + 1 )
 
 
-allNums : Int -> List Int
-allNums dim =
-    List.range 1 (dim * dim)
-
-
-
--- List of missing values from a point
-
-
-missing : Board -> Position -> List Int
-missing b p =
-    let
-        row =
-            p |> Tuple.first
-
-        col =
-            p |> Tuple.second
-
-        rowVals =
-            getRow b row |> Set.fromList
-
-        colVals =
-            getCol b col |> Set.fromList
-
-        sqVals =
-            getSq b ( row, col ) |> Set.fromList
-    in
-    rowVals |> Set.union colVals |> Set.union sqVals |> Set.diff (allNums b.dim |> Set.fromList) |> Set.toList
-
-
-allPoints : Int -> List Position
-allPoints dim =
-    let
-        nums =
-            List.range 1 (dim * dim)
-    in
-    nums |> List.concatMap (\rr -> nums |> List.map (\cc -> ( rr, cc )))
-
-
-
--- initialModel.b |> unfilled |> List.map (\p -> (p, (missing initialModel.b p))) |> List.sortBy (\(x,y) -> y |> List.length)
--- TODO Error checking
--- Simple way to enter existing puzzles just enter row by row, zero for unknown
-
-
-unfilled : Board -> List Position
-unfilled b =
-    b.contents |> Dict.keys |> Set.fromList |> Set.diff (allPoints b.dim |> Set.fromList) |> Set.toList
-
-
-type Msg
-    = SolveMsg
-    | MoreToCome
-
-
-type alias Position =
-    ( Int, Int )
-
-
-type alias Value =
-    Int
 
 
 type alias Board =
     { dim : Int
-    , contents : Dict Position Value
+    , contents : Dict.Dict Position Value
     }
 
 
 getRow : Board -> Int -> List Int
 getRow b r =
-    b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.first) == r) |> Dict.values
+    b.contents |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
 
 
 getCol : Board -> Int -> List Int
 getCol b r =
-    b.contents |> Dict.filter (\k -> \v -> (k |> Tuple.second) == r) |> Dict.values
+    b.contents |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
 
 
 getSq : Board -> Position -> List Int
@@ -130,24 +80,24 @@ getSq b ( r, c ) =
     points |> List.filterMap (\v -> Dict.get v b.contents)
 
 
-remaining : Board -> Set Position
+remaining : Board -> Set.Set Position
 remaining b =
     let
         d =
             List.range 1 (b.dim * b.dim)
 
-        allKeys : Set Position
+        allKeys : Set.Set Position
         allKeys =
             d |> List.concatMap (\x -> d |> List.map (\y -> ( x, y ))) |> Set.fromList
 
-        usedKeys : Set Position
+        usedKeys : Set.Set Position
         usedKeys =
             b.contents |> Dict.keys |> Set.fromList
     in
     usedKeys |> Set.diff allKeys
 
 
-unSolved : Position -> Board -> Set Int
+unSolved : Position -> Board -> Set.Set Int
 unSolved ( r, c ) b =
     let
         existingVals =
@@ -175,7 +125,7 @@ solveBoard b =
             b |> remaining
 
         lowPos =
-            r |> Set.toList |> List.map (\p -> ( p, unSolved p b |> Set.toList )) |> List.sortBy (\( x, y ) -> y |> List.length) |> List.head
+            r |> Set.toList |> List.map (\p -> ( p, unSolved p b |> Set.toList )) |> List.sortBy (\( _, y ) -> y |> List.length) |> List.head
     in
     case lowPos of
         Just ( pnt, val ) ->
@@ -185,7 +135,7 @@ solveBoard b =
             b
 
 
-renderNum : Position -> Value -> Svg Msg
+renderNum : Position -> Value -> Svg.Svg Msg
 renderNum p v =
     let
         colOffset =
@@ -200,16 +150,16 @@ renderNum p v =
         col =
             ((p |> Tuple.second) - 1) * 50 + colOffset |> String.fromInt
     in
-    text_
-        [ x col
-        , y row
-        , fill "black"
-        , Svg.Attributes.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
+    Svg.text_
+        [ Att.x col
+        , Att.y row
+        , Att.fill "black"
+        , Att.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
         ]
         [ Svg.text (String.fromInt v) ]
 
 
-myLines : Int -> Int -> Int -> List (Svg Msg)
+myLines : Int -> Int -> Int -> List (Svg.Svg Msg)
 myLines size dim l =
     let
         sWidth =
@@ -226,24 +176,24 @@ myLines size dim l =
         bSize =
             dim * dim * size |> String.fromInt
     in
-    [ line
-        [ x1 lSize
-        , y1 "0"
-        , x2 lSize
-        , y2 bSize
-        , fill "white"
-        , stroke "black"
-        , strokeWidth sWidth
+    [ Svg.line
+        [ Att.x1 lSize
+        , Att.y1 "0"
+        , Att.x2 lSize
+        , Att.y2 bSize
+        , Att.fill "white"
+        , Att.stroke "black"
+        , Att.strokeWidth sWidth
         ]
         []
-    , line
-        [ x1 "0"
-        , y1 lSize
-        , x2 bSize
-        , y2 lSize
-        , fill "white"
-        , stroke "black"
-        , strokeWidth sWidth
+    , Svg.line
+        [ Att.x1 "0"
+        , Att.y1 lSize
+        , Att.x2 bSize
+        , Att.y2 lSize
+        , Att.fill "white"
+        , Att.stroke "black"
+        , Att.strokeWidth sWidth
         ]
         []
     ]
@@ -266,22 +216,22 @@ renderBoard b =
                     (myLines boxSize b.dim)
                 |> List.append ((b.contents |> Dict.map renderNum) |> Dict.values)
                 |> List.append
-                    [ rect
-                        [ x "0"
-                        , y "0"
-                        , boardSize |> String.fromInt |> width
-                        , boardSize |> String.fromInt |> height
-                        , fill "white"
-                        , stroke "black"
-                        , strokeWidth "4"
+                    [ Svg.rect
+                        [ Att.x "0"
+                        , Att.y "0"
+                        , boardSize |> String.fromInt |> Att.width
+                        , boardSize |> String.fromInt |> Att.height
+                        , Att.fill "white"
+                        , Att.stroke "black"
+                        , Att.strokeWidth "4"
                         ]
                         []
                     ]
-                |> g [ transform "translate(50,50)" ]
+                |> Svg.g [ Att.transform "translate(50,50)" ]
     in
     [ grp ]
-        |> svg
-            [ width "800"
-            , height "800"
-            , viewBox "0 0 800 800"
+        |> Svg.svg
+            [ Att.width "800"
+            , Att.height "800"
+            , Att.viewBox "0 0 800 800"
             ]

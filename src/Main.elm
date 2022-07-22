@@ -3,10 +3,8 @@ module Main exposing (..)
 import Board as B
 import Browser
 import Element exposing (Element)
-import Element.Input exposing (..)
+import Element.Input
 import Html exposing (Html)
-
-
 
 -- Puzzle from Brain Training 1
 
@@ -125,10 +123,6 @@ update msg model =
     case msg of
         B.SolveMsg ->
             ( { model | b = B.solveBoard oldB }, Cmd.none )
-
-        _ ->
-            ( model, Cmd.none )
-
 
 view : Model -> Html B.Msg
 view model =
