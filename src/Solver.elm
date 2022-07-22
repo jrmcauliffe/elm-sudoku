@@ -4,35 +4,6 @@ import Board exposing (..)
 import Dict
 import Set
 
-
-getRow : Board -> Int -> List Value
-getRow b r =
-    b |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
-
-
-getCol : Board -> Int -> List Value
-getCol b r =
-    b |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
-
-
-getSq : Board -> Position -> List Value
-getSq b ( r, c ) =
-    let
-        base =
-            \i -> ((i - 1) // dim) * dim
-
-        rowNums =
-            List.range 1 dim |> List.map ((+) (base r))
-
-        colNums =
-            List.range 1 dim |> List.map ((+) (base c))
-
-        points =
-            colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
-    in
-    points |> List.filterMap (\v -> Dict.get v b)
-
-
 remaining : Board -> Set.Set Position
 remaining b =
     let
@@ -73,7 +44,7 @@ solve b =
     in
     case lowPos of
         Just ( pnt, val ) ->
-            b |> Dict.insert pnt (val |> List.head |> Maybe.withDefault 0)
+            Board.add b pnt (val |> List.head |> Maybe.withDefault 0)
 
         Nothing ->
             b

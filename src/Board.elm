@@ -1,4 +1,4 @@
-module Board exposing (Board, Msg(..), Position, Value, dim, empty, importBoard, renderBoard)
+module Board exposing (Board, Msg(..), Position, Value, dim, empty, add, importBoard, renderBoard, getRow, getCol, getSq)
 
 import Dict
 import Html exposing (Html)
@@ -27,6 +27,11 @@ type alias Position =
 type alias Value =
     Int
 
+
+
+
+add : Board -> Position -> Value -> Board
+add b p v = Dict.insert p v b
 
 importBoard : List Int -> Dict.Dict Position Value
 importBoard l =
@@ -163,3 +168,30 @@ renderBoard b =
             , Att.height "800"
             , Att.viewBox "0 0 800 800"
             ]
+
+getRow : Board -> Int -> List Value
+getRow b r =
+    b |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
+
+
+getCol : Board -> Int -> List Value
+getCol b r =
+    b |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
+
+
+getSq : Board -> Position -> List Value
+getSq b ( r, c ) =
+    let
+        base =
+            \i -> ((i - 1) // dim) * dim
+
+        rowNums =
+            List.range 1 dim |> List.map ((+) (base r))
+
+        colNums =
+            List.range 1 dim |> List.map ((+) (base c))
+
+        points =
+            colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
+    in
+    points |> List.filterMap (\v -> Dict.get v b)
