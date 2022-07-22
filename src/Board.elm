@@ -1,4 +1,4 @@
-module Board exposing (Board, Msg(..), Position, dim, importBoard, renderBoard)
+module Board exposing (Board, Msg(..), Position, Value, dim, empty, importBoard, renderBoard)
 
 import Dict
 import Html exposing (Html)
@@ -56,6 +56,11 @@ indexToRC index =
 
 type alias Board =
     Dict.Dict Position Value
+
+
+empty : Board
+empty =
+    Dict.empty
 
 
 renderNum : Position -> Value -> Svg.Svg Msg

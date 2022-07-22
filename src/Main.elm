@@ -130,10 +130,10 @@ update msg model =
 
 view : Model -> Html B.Msg
 view model =
-    Element.column [ Element.explain Debug.todo, Element.width Element.fill, Element.height Element.fill, Element.spacing 5 ]
+    Element.column [ Element.width Element.fill, Element.height Element.fill, Element.spacing 5 ]
         [ Element.row [] [ model.b |> B.renderBoard |> Element.html ], Element.row [ Element.centerX ] [ Element.el [] myButton ] ]
         |> Element.layout []
 
 
 myButton =
-    Element.Input.button [] { onPress = Just B.SolveMsg, label = Element.text "Click Me" }
+    Element.Input.button [] { onPress = Just B.SolveMsg, label = Element.text "Solve" }
