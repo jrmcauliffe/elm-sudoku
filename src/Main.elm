@@ -5,6 +5,7 @@ import Browser
 import Element exposing (Element)
 import Element.Input
 import Html exposing (Html)
+import Solver
 
 
 
@@ -124,7 +125,7 @@ update msg model =
     in
     case msg of
         B.SolveMsg ->
-            ( { model | b = B.solveBoard oldB }, Cmd.none )
+            ( { model | b = Solver.solve oldB }, Cmd.none )
 
 
 view : Model -> Html B.Msg

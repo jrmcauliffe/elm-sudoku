@@ -1,4 +1,4 @@
-module Board exposing (Board, Msg(..), importBoard, renderBoard, solveBoard)
+module Board exposing (Board, Msg(..), Position, dim, importBoard, renderBoard)
 
 import Dict
 import Html exposing (Html)
@@ -6,12 +6,19 @@ import Set
 import Svg
 import Svg.Attributes as Att
 
+
+
 -- TODO Work out a better way of dealing with this
+
+
 dim : Int
-dim = 3
+dim =
+    3
+
 
 type Msg
     = SolveMsg
+
 
 type alias Position =
     ( Int, Int )
@@ -20,12 +27,13 @@ type alias Position =
 type alias Value =
     Int
 
+
 importBoard : List Int -> Dict.Dict Position Value
 importBoard l =
     let
         --
         idx =
-            List.length l |> List.range 1 |> List.map (indexToRC )
+            List.length l |> List.range 1 |> List.map indexToRC
 
         pairs =
             List.map2 (\a -> \b -> ( a, b )) idx l
@@ -41,95 +49,13 @@ importBoard l =
         |> Dict.fromList
 
 
-
 indexToRC : Int -> ( Int, Int )
 indexToRC index =
     ( ((index - 1) // (dim * dim)) + 1, modBy (dim * dim) (index - 1) + 1 )
 
 
-
-
-type alias Board = Dict.Dict Position Value
-
-
-
-getRow : Board -> Int -> List Int
-getRow b r =
-    b |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
-
-
-getCol : Board -> Int -> List Int
-getCol b r =
-    b |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
-
-
-getSq : Board -> Position -> List Int
-getSq b ( r, c ) =
-    let
-        base =
-            \i -> ((i - 1) // dim) * dim
-
-        rowNums =
-            List.range 1 dim |> List.map ((+) (base r))
-
-        colNums =
-            List.range 1 dim |> List.map ((+) (base c))
-
-        points =
-            colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
-    in
-    points |> List.filterMap (\v -> Dict.get v b)
-
-
-remaining : Board -> Set.Set Position
-remaining b =
-    let
-        d =
-            List.range 1 (dim * dim)
-
-        allKeys : Set.Set Position
-        allKeys =
-            d |> List.concatMap (\x -> d |> List.map (\y -> ( x, y ))) |> Set.fromList
-
-        usedKeys : Set.Set Position
-        usedKeys =
-            b |> Dict.keys |> Set.fromList
-    in
-    usedKeys |> Set.diff allKeys
-
-
-unSolved : Position -> Board -> Set.Set Int
-unSolved ( r, c ) b =
-    let
-        existingVals =
-            getSq b ( r, c ) |> List.append (getRow b r) |> List.append (getCol b c) |> Set.fromList
-
-        allVals =
-            List.range 1 (dim * dim) |> Set.fromList
-    in
-    existingVals |> Set.diff allVals
-
-
-updateBoard : Board -> Position -> Int -> Board
-updateBoard b p i =
-    b |> Dict.insert p i
-
-
-solveBoard : Board -> Board
-solveBoard b =
-    let
-        r =
-            b |> remaining
-
-        lowPos =
-            r |> Set.toList |> List.map (\p -> ( p, unSolved p b |> Set.toList )) |> List.sortBy (\( _, y ) -> y |> List.length) |> List.head
-    in
-    case lowPos of
-        Just ( pnt, val ) ->
-            updateBoard b pnt (val |> List.head |> Maybe.withDefault 0)
-
-        Nothing ->
-            b
+type alias Board =
+    Dict.Dict Position Value
 
 
 renderNum : Position -> Value -> Svg.Svg Msg
