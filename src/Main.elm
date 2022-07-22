@@ -6,6 +6,8 @@ import Element exposing (Element)
 import Element.Input
 import Html exposing (Html)
 
+
+
 -- Puzzle from Brain Training 1
 
 
@@ -101,7 +103,7 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    { b = B.Board 3 (puzzle1 |> B.importBoard 3) }
+    { b = puzzle1 |> B.importBoard }
 
 
 main : Program () Model B.Msg
@@ -123,6 +125,7 @@ update msg model =
     case msg of
         B.SolveMsg ->
             ( { model | b = B.solveBoard oldB }, Cmd.none )
+
 
 view : Model -> Html B.Msg
 view model =

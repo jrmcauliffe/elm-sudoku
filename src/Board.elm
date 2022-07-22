@@ -6,6 +6,10 @@ import Set
 import Svg
 import Svg.Attributes as Att
 
+-- TODO Work out a better way of dealing with this
+dim : Int
+dim = 3
+
 type Msg
     = SolveMsg
 
@@ -16,13 +20,12 @@ type alias Position =
 type alias Value =
     Int
 
-
-importBoard : Int -> List Int -> Dict.Dict Position Value
-importBoard dim l =
+importBoard : List Int -> Dict.Dict Position Value
+importBoard l =
     let
         --
         idx =
-            List.length l |> List.range 1 |> List.map (dimToRC dim)
+            List.length l |> List.range 1 |> List.map (indexToRC )
 
         pairs =
             List.map2 (\a -> \b -> ( a, b )) idx l
@@ -39,52 +42,50 @@ importBoard dim l =
 
 
 
-dimToRC : Int -> Int -> ( Int, Int )
-dimToRC dim index =
+indexToRC : Int -> ( Int, Int )
+indexToRC index =
     ( ((index - 1) // (dim * dim)) + 1, modBy (dim * dim) (index - 1) + 1 )
 
 
 
 
-type alias Board =
-    { dim : Int
-    , contents : Dict.Dict Position Value
-    }
+type alias Board = Dict.Dict Position Value
+
 
 
 getRow : Board -> Int -> List Int
 getRow b r =
-    b.contents |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
+    b |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.values
 
 
 getCol : Board -> Int -> List Int
 getCol b r =
-    b.contents |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
+    b |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == r) |> Dict.values
 
 
 getSq : Board -> Position -> List Int
 getSq b ( r, c ) =
     let
         base =
-            \i -> ((i - 1) // b.dim) * b.dim
+            \i -> ((i - 1) // dim) * dim
 
         rowNums =
-            List.range 1 b.dim |> List.map ((+) (base r))
+            List.range 1 dim |> List.map ((+) (base r))
 
         colNums =
-            List.range 1 b.dim |> List.map ((+) (base c))
+            List.range 1 dim |> List.map ((+) (base c))
 
         points =
             colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
     in
-    points |> List.filterMap (\v -> Dict.get v b.contents)
+    points |> List.filterMap (\v -> Dict.get v b)
 
 
 remaining : Board -> Set.Set Position
 remaining b =
     let
         d =
-            List.range 1 (b.dim * b.dim)
+            List.range 1 (dim * dim)
 
         allKeys : Set.Set Position
         allKeys =
@@ -92,7 +93,7 @@ remaining b =
 
         usedKeys : Set.Set Position
         usedKeys =
-            b.contents |> Dict.keys |> Set.fromList
+            b |> Dict.keys |> Set.fromList
     in
     usedKeys |> Set.diff allKeys
 
@@ -104,18 +105,14 @@ unSolved ( r, c ) b =
             getSq b ( r, c ) |> List.append (getRow b r) |> List.append (getCol b c) |> Set.fromList
 
         allVals =
-            List.range 1 (b.dim * b.dim) |> Set.fromList
+            List.range 1 (dim * dim) |> Set.fromList
     in
     existingVals |> Set.diff allVals
 
 
 updateBoard : Board -> Position -> Int -> Board
 updateBoard b p i =
-    let
-        vals =
-            b.contents |> Dict.insert p i
-    in
-    { b | contents = vals }
+    b |> Dict.insert p i
 
 
 solveBoard : Board -> Board
@@ -159,8 +156,8 @@ renderNum p v =
         [ Svg.text (String.fromInt v) ]
 
 
-myLines : Int -> Int -> Int -> List (Svg.Svg Msg)
-myLines size dim l =
+myLines : Int -> Int -> List (Svg.Svg Msg)
+myLines size l =
     let
         sWidth =
             case modBy dim l of
@@ -208,13 +205,13 @@ renderBoard b =
 
         -- edge of board in pixels
         boardSize =
-            b.dim * b.dim * boxSize
+            dim * dim * boxSize
 
         grp =
-            List.range 1 (b.dim * b.dim)
+            List.range 1 (dim * dim)
                 |> List.concatMap
-                    (myLines boxSize b.dim)
-                |> List.append ((b.contents |> Dict.map renderNum) |> Dict.values)
+                    (myLines boxSize)
+                |> List.append ((b |> Dict.map renderNum) |> Dict.values)
                 |> List.append
                     [ Svg.rect
                         [ Att.x "0"
