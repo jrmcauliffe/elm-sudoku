@@ -8,10 +8,6 @@ import Element.Input as Input
 import Html exposing (Html)
 
 
-
---import Solver
-
-
 puzzle1 =
     "160409800420001500005800043502708091000090000870103206930005600001900032004607015"
 
@@ -66,10 +62,10 @@ update msg model =
 
 view : Model -> Html B.Msg
 view model =
-    Element.column [ Element.width Element.fill, Element.spacing 5 ]
+    Element.column [ Element.width Element.fill, Element.spacing 20, Element.padding 25 ]
         [ Element.row [] [ model.board |> B.renderBoard |> Element.html ]
-        , Element.row [ padding 20 ] [ Element.el [] gameInput, model.inputStatus |> Element.text ]
-        , Element.row [] [ Element.el [] myButton ]
+        , Element.row [] [ Element.el [] gameInput, model.inputStatus |> Element.text ]
+        , Element.row [] [ Element.el [] loadButton ]
         ]
         |> Element.layout []
 
@@ -90,5 +86,7 @@ gameInput =
         }
 
 
-myButton =
-    Input.button [] { onPress = Just B.SolveMsg, label = Element.text "Load" }
+loadButton =
+    Input.button
+        []
+        { onPress = Just B.SolveMsg, label = Element.text "Load" }
