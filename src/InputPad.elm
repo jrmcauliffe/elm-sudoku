@@ -31,11 +31,12 @@ renderInput msgOnClick input =
 
         buttonStyle =
             [ Element.padding 10
+            , Element.spacing 10
             , Element.width (px 60)
             , Element.height (px 60)
             , Border.rounded 6
             , Border.width 2
-            , Border.color <| rgb255 0x72 0x9F 0xCF
+            , Border.color <| rgb255 0x00 0x00 0x00
             ]
 
         button v =
@@ -54,7 +55,7 @@ renderInput msgOnClick input =
             let
                 renderRow : List Value -> Element msg
                 renderRow rowVals =
-                    Element.row [] (rowVals |> List.map button)
+                    Element.row [ Element.spacing 10 ] (rowVals |> List.map button)
             in
             case vs of
                 a :: b :: c :: rest ->
@@ -63,4 +64,4 @@ renderInput msgOnClick input =
                 x ->
                     [ renderRow x ]
     in
-    Element.column [] (vals |> renderRows)
+    Element.column [ Element.spacing 10 ] (vals |> renderRows)
