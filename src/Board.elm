@@ -11,11 +11,6 @@ empty =
     { board = Dict.empty, rank = 3 }
 
 
-type Msg
-    = SolveMsg
-    | TextMsg String
-
-
 type alias Row =
     Int
 
@@ -143,7 +138,7 @@ getPeers ( r, c ) b =
     getCol c b ++ getRow r b ++ getSq b ( r, c )
 
 
-renderDigit : Position -> List Value -> Svg.Svg Msg
+renderDigit : Position -> List Value -> Svg.Svg msg
 renderDigit p v =
     let
         colOffset =
@@ -175,7 +170,7 @@ renderDigit p v =
         [ Svg.text val ]
 
 
-renderLines : Int -> Int -> Int -> Int -> Int -> List (Svg.Svg Msg)
+renderLines : Int -> Int -> Int -> Int -> Int -> List (Svg.Svg msg)
 renderLines rank size light heavy l =
     let
         lineWidth =
@@ -215,7 +210,7 @@ renderLines rank size light heavy l =
     ]
 
 
-renderBoard : Board -> Html Msg
+renderBoard : Board -> Html msg
 renderBoard b =
     let
         -- edge of number box in pixels
