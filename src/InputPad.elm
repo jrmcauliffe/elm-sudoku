@@ -32,8 +32,8 @@ renderInput msgOnClick input =
         buttonStyle =
             [ Element.padding 10
             , Element.spacing 10
-            , Element.width (px 60)
-            , Element.height (px 60)
+            , Element.width (px 80)
+            , Element.height (px 80)
             , Border.rounded 6
             , Border.width 2
             , Border.color <| rgb255 0x00 0x00 0x00
@@ -64,4 +64,4 @@ renderInput msgOnClick input =
                 x ->
                     [ renderRow x ]
     in
-    Element.column [ Element.spacing 10 ] (vals |> renderRows)
+    Element.column [ Element.spacing 10, Element.padding 50 ] (vals |> renderRows)

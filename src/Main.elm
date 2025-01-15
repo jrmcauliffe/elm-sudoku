@@ -89,7 +89,7 @@ gameInput =
         , height <| px 200
         , Border.rounded 6
         , Border.width 2
-        , Border.color <| rgb255 0x72 0x9F 0xCF
+        , Border.color <| rgb255 0x00 0x00 0x00
         ]
         { onChange = TextMsg
         , text = ""
