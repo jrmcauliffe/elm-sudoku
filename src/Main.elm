@@ -77,7 +77,12 @@ update msg model =
             ( { model | inputString = status }, Cmd.none )
 
         ButtonMsg val ->
-            ( { model | status = "Button Pressed -> " ++ Debug.toString val }, Cmd.none )
+            case ( model.board.selectedPosition, val ) of
+                ( Just pos, I.Num i ) ->
+                    ( updateBoard (\b -> B.add b pos i) model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
 
         BoardMsg pos ->
             ( updateBoard (\b -> { b | selectedPosition = Just pos }) model, Cmd.none )
