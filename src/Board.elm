@@ -1,14 +1,15 @@
 module Board exposing (..)
 
-import Dict
-import Html exposing (Html)
+import Dict exposing (Dict, map)
+import Element exposing (Element)
 import Svg
 import Svg.Attributes as Att
+import Svg.Events as Event
 
 
 empty : Board
 empty =
-    { board = Dict.empty, rank = 3 }
+    { positions = Dict.empty, selectedPosition = Nothing, rank = 3 }
 
 
 type alias Row =
@@ -27,10 +28,25 @@ type alias Value =
     Int
 
 
+type alias Positions =
+    Dict Position (List Value)
+
+
+type alias ShadedPositions =
+    Dict Position ( List Value, Shading )
+
+
 type alias Board =
-    { board : Dict.Dict Position (List Value)
+    { positions : Positions
+    , selectedPosition : Maybe Position
     , rank : Int
     }
+
+
+type Shading
+    = None
+    | Light
+    | Heavy
 
 
 newBoard : Int -> Board
@@ -45,12 +61,12 @@ newBoard rank =
                     )
                 |> Dict.fromList
     in
-    { board = b, rank = rank }
+    { positions = b, selectedPosition = Nothing, rank = rank }
 
 
 add : Board -> Position -> Value -> Board
 add b p v =
-    { b | board = Dict.insert p [ v ] b.board }
+    { b | positions = Dict.insert p [ v ] b.positions }
 
 
 importBoard : String -> Result String Board
@@ -88,7 +104,7 @@ importBoard s =
         isSquare =
             (l |> List.length |> toFloat |> sqrt |> sqrt) == (rank |> toFloat) && (rank /= 0)
 
-        bd =
+        pp =
             pairs
                 |> List.map
                     (\( ( x, y ), v ) ->
@@ -102,7 +118,7 @@ importBoard s =
                 |> Dict.fromList
     in
     if isSquare then
-        { board = bd, rank = rank } |> Ok
+        { positions = pp, selectedPosition = Nothing, rank = rank } |> Ok
 
     else
         Err "Invalid board"
@@ -110,12 +126,12 @@ importBoard s =
 
 getRow : Int -> Board -> List Position
 getRow r b =
-    b.board |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
+    b.positions |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
 
 
 getCol : Int -> Board -> List Position
 getCol c b =
-    b.board |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
+    b.positions |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
 
 
 getSq : Board -> Position -> List Position
@@ -138,20 +154,31 @@ getPeers ( r, c ) b =
     getCol c b ++ getRow r b ++ getSq b ( r, c )
 
 
-renderDigit : Position -> List Value -> Svg.Svg msg
-renderDigit p v =
+renderSquare : (Position -> msg) -> Position -> ( List Value, Shading ) -> Svg.Svg msg
+renderSquare msgOnclick p ( v, s ) =
     let
-        colOffset =
-            15
-
-        rowOffset =
+        xTextOffset =
             38
 
-        row =
-            ((p |> Tuple.first) - 1) * 50 + rowOffset |> String.fromInt
+        yTextOffset =
+            15
 
-        col =
-            ((p |> Tuple.second) - 1) * 50 + colOffset |> String.fromInt
+        x =
+            ((p |> Tuple.second) - 1) * 50
+
+        y =
+            ((p |> Tuple.first) - 1) * 50
+
+        backgroundColor =
+            case s of
+                Light ->
+                    "#f0f0f0"
+
+                Heavy ->
+                    "#d0d0d0"
+
+                _ ->
+                    "#ffffff"
 
         val =
             case v of
@@ -161,13 +188,19 @@ renderDigit p v =
                 _ ->
                     " "
     in
-    Svg.text_
-        [ Att.x col
-        , Att.y row
-        , Att.fill "black"
-        , Att.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
+    Svg.svg []
+        [ Svg.rect
+            [ Att.x (x |> String.fromInt), Att.y (y |> String.fromInt), Att.width "50", Att.height "50", Att.fill backgroundColor, Event.onClick (msgOnclick p) ]
+            []
+        , Svg.text_
+            [ Att.x (x + yTextOffset |> String.fromInt)
+            , Att.y (y + xTextOffset |> String.fromInt)
+            , Att.fill "black"
+            , Att.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
+            , Event.onClick (msgOnclick p)
+            ]
+            [ Svg.text val ]
         ]
-        [ Svg.text val ]
 
 
 renderLines : Int -> Int -> Int -> Int -> Int -> List (Svg.Svg msg)
@@ -210,8 +243,8 @@ renderLines rank size light heavy l =
     ]
 
 
-renderBoard : Board -> Html msg
-renderBoard b =
+renderBoard : (Position -> msg) -> Board -> Element msg
+renderBoard msgOnclick b =
     let
         -- edge of number box in pixels
         boxSize =
@@ -227,24 +260,24 @@ renderBoard b =
         boardSize =
             b.rank * b.rank * boxSize
 
+        applyShading : Maybe Position -> Positions -> ShadedPositions
+        applyShading p ps =
+            ps
+                |> Dict.map
+                    (\k v ->
+                        if Just k == p then
+                            ( v, Heavy )
+
+                        else
+                            ( v, None )
+                    )
+
         board =
-            List.range 1 (b.rank * b.rank)
+            List.range 0 ((b.rank * b.rank) + 1)
                 |> List.concatMap
                     (renderLines b.rank boxSize lineWeight heavyLineWeight)
-                |> List.append ((b.board |> Dict.map renderDigit) |> Dict.values)
-                |> List.append
-                    [ Svg.rect
-                        [ Att.x "0"
-                        , Att.y "0"
-                        , boardSize |> String.fromInt |> Att.width
-                        , boardSize |> String.fromInt |> Att.height
-                        , Att.fill "white"
-                        , Att.stroke "black"
-                        , heavyLineWeight |> String.fromInt |> Att.strokeWidth
-                        ]
-                        []
-                    ]
-                |> Svg.g [ Att.transform "translate(2,2)" ]
+                |> List.append (b.positions |> applyShading b.selectedPosition |> Dict.map (renderSquare msgOnclick) |> Dict.values)
+                |> Svg.g [ Att.transform ("translate(" ++ (lineWeight |> String.fromInt) ++ ", " ++ (lineWeight |> String.fromInt) ++ ")") ]
 
         viewbox =
             "0 0 " ++ (boardSize + heavyLineWeight |> String.fromInt) ++ " " ++ (boardSize + heavyLineWeight |> String.fromInt)
@@ -255,3 +288,4 @@ renderBoard b =
             , boardSize |> String.fromInt |> Att.height
             , viewbox |> Att.viewBox
             ]
+        |> Element.html

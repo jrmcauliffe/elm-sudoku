@@ -43,6 +43,7 @@ type Msg
     = SolveMsg
     | TextMsg String
     | ButtonMsg I.Value
+    | BoardMsg B.Position
 
 
 main : Program () Model Msg
@@ -57,6 +58,12 @@ main =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
+    let
+        -- TODO A bit of a hack, investigate better way to do this
+        updateBoard : (B.Board -> B.Board) -> Model -> Model
+        updateBoard transform m =
+            { m | board = transform m.board }
+    in
     case msg of
         SolveMsg ->
             case model.inputString |> B.importBoard of
@@ -66,17 +73,20 @@ update msg model =
                 Err e ->
                     ( { model | status = e }, Cmd.none )
 
-        TextMsg s ->
-            ( { model | inputString = s }, Cmd.none )
+        TextMsg status ->
+            ( { model | inputString = status }, Cmd.none )
 
         ButtonMsg val ->
             ( { model | status = "Button Pressed -> " ++ Debug.toString val }, Cmd.none )
+
+        BoardMsg pos ->
+            ( updateBoard (\b -> { b | selectedPosition = Just pos }) model, Cmd.none )
 
 
 view : Model -> Html Msg
 view model =
     Element.column [ Element.width Element.fill, Element.spacing 20, Element.padding 25 ]
-        [ Element.row [] [ model.board |> B.renderBoard |> Element.html, I.renderInput ButtonMsg model.input ]
+        [ Element.row [] [ B.renderBoard BoardMsg model.board, I.renderInput ButtonMsg model.input ]
         , Element.row [] [ Element.el [] gameInput, model.status |> Element.text ]
         , Element.row [] [ Element.el [] loadButton ]
         ]
