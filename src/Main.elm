@@ -2,7 +2,6 @@ module Main exposing (..)
 
 import Board as B
 import Browser
-import Dict
 import Element exposing (..)
 import Element.Border as Border
 import Element.Input as Input
@@ -96,7 +95,10 @@ update msg model =
                         _ ->
                             Just pos
             in
-            ( updateBoard (\b -> { b | selectedSquare = newSelected }) model, Cmd.none )
+            ( updateBoard (\b -> { b | selectedSquare = newSelected }) model
+                |> updateBoard (\b -> { b | squares = b.squares |> B.shadeBoard pos b.rank })
+            , Cmd.none
+            )
 
 
 view : Model -> Html Msg

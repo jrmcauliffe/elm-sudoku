@@ -130,34 +130,76 @@ importBoard s =
         Err "Invalid board"
 
 
-getRow : Int -> Board -> List Position
-getRow r b =
-    b.squares |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
+shadeBoard : Position -> Int -> Squares -> Squares
+shadeBoard p rank s =
+    let
+        shadeSelected : Position -> Squares -> Squares
+        shadeSelected pp ss =
+            ss
+                |> Dict.map
+                    (\k ( v, shading ) ->
+                        ( v
+                        , if Just k == Just pp then
+                            Heavy
+
+                          else
+                            shading
+                        )
+                    )
+
+        shadePeers : Position -> Squares -> Squares
+        shadePeers pp ss =
+            let
+                peers =
+                    ss |> getPeers pp rank
+            in
+            ss
+                |> Dict.map
+                    (\k ( v, _ ) ->
+                        ( v
+                        , if List.member k peers then
+                            Light
+
+                          else
+                            None
+                        )
+                    )
+    in
+    s |> shadePeers p |> shadeSelected p
 
 
-getCol : Int -> Board -> List Position
-getCol c b =
-    b.squares |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
+
+-- |> shadeSelected p
 
 
-getSq : Board -> Position -> List Position
-getSq b ( r, c ) =
+getRow : Int -> Squares -> List Position
+getRow r s =
+    s |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
+
+
+getCol : Int -> Squares -> List Position
+getCol c s =
+    s |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
+
+
+getSq : Position -> Int -> Squares -> List Position
+getSq ( r, c ) rank s =
     let
         base =
-            \i -> ((i - 1) // b.rank) * b.rank
+            \i -> ((i - 1) // rank) * rank
 
         rowNums =
-            List.range 1 b.rank |> List.map ((+) (base r))
+            List.range 1 rank |> List.map ((+) (base r))
 
         colNums =
-            List.range 1 b.rank |> List.map ((+) (base c))
+            List.range 1 rank |> List.map ((+) (base c))
     in
     colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
 
 
-getPeers : Position -> Board -> List Position
-getPeers ( r, c ) b =
-    getCol c b ++ getRow r b ++ getSq b ( r, c )
+getPeers : Position -> Int -> Squares -> List Position
+getPeers ( r, c ) rank s =
+    getCol c s ++ getRow r s ++ getSq ( r, c ) rank s
 
 
 
@@ -274,17 +316,6 @@ renderBoard msgOnclick b =
         boardSize =
             b.rank * b.rank * boxSize
 
-        --applyShading : Maybe Square -> SquareVals -> ShadedPositions
-        --applyShading p ps =
-        --    ps
-        --        |> Dict.map
-        --            (\k v ->
-        --                if Just k == p then
-        --                    ( v, Heavy )
-        --
-        --                else
-        --                    ( v, None )
-        --            )
         board =
             List.range 0 ((b.rank * b.rank) + 1)
                 |> List.concatMap
