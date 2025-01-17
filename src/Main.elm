@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Board as B
 import Browser
+import Dict
 import Element exposing (..)
 import Element.Border as Border
 import Element.Input as Input
@@ -77,15 +78,25 @@ update msg model =
             ( { model | inputString = status }, Cmd.none )
 
         ButtonMsg val ->
-            case ( model.board.selectedPosition, val ) of
+            case ( model.board.selectedSquare, val ) of
                 ( Just pos, I.Num i ) ->
-                    ( updateBoard (\b -> B.add b pos i) model, Cmd.none )
+                    ( updateBoard (\b -> B.add b pos ( Just (B.UserValue i), B.None )) model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
 
         BoardMsg pos ->
-            ( updateBoard (\b -> { b | selectedPosition = Just pos }) model, Cmd.none )
+            let
+                -- Only allow user squares to be selected
+                newSelected =
+                    case model.board |> B.get pos of
+                        Just ( Just (B.ProblemValue _), _ ) ->
+                            Nothing
+
+                        _ ->
+                            Just pos
+            in
+            ( updateBoard (\b -> { b | selectedSquare = newSelected }) model, Cmd.none )
 
 
 view : Model -> Html Msg

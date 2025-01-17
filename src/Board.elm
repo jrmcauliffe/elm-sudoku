@@ -9,7 +9,7 @@ import Svg.Events as Event
 
 empty : Int -> Board
 empty r =
-    { positions = Dict.empty, selectedPosition = Nothing, rank = r }
+    { squares = Dict.empty, selectedSquare = Nothing, rank = r }
 
 
 type alias Row =
@@ -24,21 +24,22 @@ type alias Position =
     ( Row, Col )
 
 
-type alias Value =
-    Int
+type Value
+    = ProblemValue Int
+    | UserValue Int
 
 
-type alias Positions =
-    Dict Position (List Value)
+type alias Square =
+    ( Maybe Value, Shading )
 
 
-type alias ShadedPositions =
-    Dict Position ( List Value, Shading )
+type alias Squares =
+    Dict Position Square
 
 
 type alias Board =
-    { positions : Positions
-    , selectedPosition : Maybe Position
+    { squares : Squares
+    , selectedSquare : Maybe Position
     , rank : Int
     }
 
@@ -57,16 +58,21 @@ newBoard rank =
                 |> List.concatMap
                     (\r ->
                         List.range 1 (rank * rank)
-                            |> List.map (\c -> ( ( c, r ), List.range 1 (rank * rank) ))
+                            |> List.map (\c -> ( ( c, r ), ( Nothing, None ) ))
                     )
                 |> Dict.fromList
     in
-    { positions = b, selectedPosition = Nothing, rank = rank }
+    { squares = b, selectedSquare = Nothing, rank = rank }
 
 
-add : Board -> Position -> Value -> Board
-add b p v =
-    { b | positions = Dict.insert p [ v ] b.positions }
+get : Position -> Board -> Maybe Square
+get p b =
+    Dict.get p b.squares
+
+
+add : Board -> Position -> Square -> Board
+add b p s =
+    { b | squares = Dict.insert p s b.squares }
 
 
 importBoard : String -> Result String Board
@@ -110,15 +116,15 @@ importBoard s =
                     (\( ( x, y ), v ) ->
                         case v of
                             Just value ->
-                                ( ( x, y ), [ value ] )
+                                ( ( x, y ), ( Just (ProblemValue value), None ) )
 
                             Nothing ->
-                                ( ( x, y ), List.range 1 rank )
+                                ( ( x, y ), ( Nothing, None ) )
                     )
                 |> Dict.fromList
     in
     if isSquare then
-        { positions = pp, selectedPosition = Nothing, rank = rank } |> Ok
+        { squares = pp, selectedSquare = Nothing, rank = rank } |> Ok
 
     else
         Err "Invalid board"
@@ -126,12 +132,12 @@ importBoard s =
 
 getRow : Int -> Board -> List Position
 getRow r b =
-    b.positions |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
+    b.squares |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
 
 
 getCol : Int -> Board -> List Position
 getCol c b =
-    b.positions |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
+    b.squares |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
 
 
 getSq : Board -> Position -> List Position
@@ -158,7 +164,7 @@ getPeers ( r, c ) b =
 -- Render a square on the board with the appropriate shading and value
 
 
-renderSquare : (Position -> msg) -> Position -> ( List Value, Shading ) -> Svg.Svg msg
+renderSquare : (Position -> msg) -> Position -> Square -> Svg.Svg msg
 renderSquare msgOnclick p ( v, s ) =
     let
         -- Offsets to make the values appear in the center of the square
@@ -185,13 +191,16 @@ renderSquare msgOnclick p ( v, s ) =
                 _ ->
                     "#ffffff"
 
-        val =
+        ( val, colour ) =
             case v of
-                [ vv ] ->
-                    String.fromInt vv
+                Just (ProblemValue vv) ->
+                    ( String.fromInt vv, "black" )
+
+                Just (UserValue vv) ->
+                    ( String.fromInt vv, "gray" )
 
                 _ ->
-                    " "
+                    ( " ", "blue" )
     in
     Svg.svg []
         [ Svg.rect
@@ -200,8 +209,8 @@ renderSquare msgOnclick p ( v, s ) =
         , Svg.text_
             [ Att.x (x + yTextOffset |> String.fromInt)
             , Att.y (y + xTextOffset |> String.fromInt)
-            , Att.fill "black"
-            , Att.style "font-family: Arial; font-size: 34; stroke: #000000; fill: #000000;"
+            , Att.fill colour
+            , Att.style "font-family: Arial; font-size: 34;"
             , Event.onClick (msgOnclick p)
             ]
             [ Svg.text val ]
@@ -265,23 +274,22 @@ renderBoard msgOnclick b =
         boardSize =
             b.rank * b.rank * boxSize
 
-        applyShading : Maybe Position -> Positions -> ShadedPositions
-        applyShading p ps =
-            ps
-                |> Dict.map
-                    (\k v ->
-                        if Just k == p then
-                            ( v, Heavy )
-
-                        else
-                            ( v, None )
-                    )
-
+        --applyShading : Maybe Square -> SquareVals -> ShadedPositions
+        --applyShading p ps =
+        --    ps
+        --        |> Dict.map
+        --            (\k v ->
+        --                if Just k == p then
+        --                    ( v, Heavy )
+        --
+        --                else
+        --                    ( v, None )
+        --            )
         board =
             List.range 0 ((b.rank * b.rank) + 1)
                 |> List.concatMap
                     (renderLines b.rank boxSize lineWeight heavyLineWeight)
-                |> List.append (b.positions |> applyShading b.selectedPosition |> Dict.map (renderSquare msgOnclick) |> Dict.values)
+                |> List.append (b.squares |> Dict.map (renderSquare msgOnclick) |> Dict.values)
                 |> Svg.g [ Att.transform ("translate(" ++ (lineWeight |> String.fromInt) ++ ", " ++ (lineWeight |> String.fromInt) ++ ")") ]
 
         viewbox =
