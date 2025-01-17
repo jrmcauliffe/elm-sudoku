@@ -7,9 +7,9 @@ import Svg.Attributes as Att
 import Svg.Events as Event
 
 
-empty : Board
-empty =
-    { positions = Dict.empty, selectedPosition = Nothing, rank = 3 }
+empty : Int -> Board
+empty r =
+    { positions = Dict.empty, selectedPosition = Nothing, rank = r }
 
 
 type alias Row =
@@ -154,9 +154,14 @@ getPeers ( r, c ) b =
     getCol c b ++ getRow r b ++ getSq b ( r, c )
 
 
+
+-- Render a square on the board with the appropriate shading and value
+
+
 renderSquare : (Position -> msg) -> Position -> ( List Value, Shading ) -> Svg.Svg msg
 renderSquare msgOnclick p ( v, s ) =
     let
+        -- Offsets to make the values appear in the center of the square
         xTextOffset =
             38
 
@@ -172,10 +177,10 @@ renderSquare msgOnclick p ( v, s ) =
         backgroundColor =
             case s of
                 Light ->
-                    "#f0f0f0"
+                    "#E0E0E0"
 
                 Heavy ->
-                    "#d0d0d0"
+                    "#A0A0A0"
 
                 _ ->
                     "#ffffff"
