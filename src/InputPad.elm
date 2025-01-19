@@ -9,6 +9,7 @@ type Value
     = Num Int
     | Undo
     | Redo
+    | Assess
     | Nothing
 
 
@@ -28,7 +29,7 @@ renderInput msgOnClick input =
         -- Buttons in a phone keypad layout ordering
         vals : List Value
         vals =
-            Redo :: Undo :: ([ 3, 2, 1, 6, 5, 4, 9, 8, 7 ] |> List.map Num) |> List.reverse
+            Assess :: Redo :: Undo :: ([ 3, 2, 1, 6, 5, 4, 9, 8, 7 ] |> List.map Num) |> List.reverse
 
         buttonStyle =
             [ Element.padding 10
@@ -50,6 +51,9 @@ renderInput msgOnClick input =
 
                 Redo ->
                     Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "Redo" }
+
+                Assess ->
+                    Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "?" }
 
                 Nothing ->
                     Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "" }

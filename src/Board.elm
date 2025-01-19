@@ -143,18 +143,18 @@ importPuzzle s =
 --TODO change these to be rank based
 
 
-getRow : Int -> List Position -> List Position
-getRow r s =
-    s |> List.filter (\k -> (k |> Tuple.first) == r)
+getRow : Int -> Position -> List Position
+getRow rank ( r, _ ) =
+    (rank * rank) |> List.range 1 |> List.map (\c -> ( r, c ))
 
 
-getCol : Int -> List Position -> List Position
-getCol c s =
-    s |> List.filter (\k -> (k |> Tuple.second) == c)
+getCol : Int -> Position -> List Position
+getCol rank ( _, c ) =
+    (rank * rank) |> List.range 1 |> List.map (\r -> ( r, c ))
 
 
-getSq : Position -> Int -> List Position -> List Position
-getSq ( r, c ) rank s =
+getSq : Int -> Position -> List Position
+getSq rank ( r, c ) =
     let
         base =
             \i -> ((i - 1) // rank) * rank
@@ -168,9 +168,9 @@ getSq ( r, c ) rank s =
     colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
 
 
-getPeers : Position -> Int -> List Position -> List Position
-getPeers ( r, c ) rank s =
-    getCol c s ++ getRow r s ++ getSq ( r, c ) rank s
+getPeers : Int -> Position -> List Position
+getPeers rank pos =
+    getCol rank pos ++ getRow rank pos ++ getSq rank pos
 
 
 
@@ -304,13 +304,14 @@ renderBoard msgOnclick puzzle entries selected =
                         |> Dict.map (\_ v -> ( Just v, ( Heavy, None ) ))
 
                 userSquares =
-                    entries |> List.map (\( pp, v ) -> ( pp, ( Just v, ( Light, None ) ) )) |> Dict.fromList
+                    entries |> List.foldr (\( k, v ) -> Dict.insert k ( Just v, ( Light, None ) )) Dict.empty
 
+                -- entries |> List.map (\( pp, v ) -> ( pp, ( Just v, ( Light, None ) ) )) |> Dict.fromList
                 shadeSquares : Position -> Dict Position ( Maybe Value, RenderStyle ) -> Dict Position ( Maybe Value, RenderStyle )
                 shadeSquares p ss =
                     let
                         peers =
-                            ss |> Dict.keys |> getPeers p puzzle.rank
+                            getPeers puzzle.rank p
                     in
                     Dict.map
                         (\k ( v, shading ) ->
@@ -355,3 +356,38 @@ renderBoard msgOnclick puzzle entries selected =
             , viewbox |> Att.viewBox
             ]
         |> Element.html
+
+
+type Assessment
+    = Incorrect
+    | PossiblyCorrect
+    | Correct
+
+
+assess : Puzzle -> List Entry -> Assessment
+assess puzzle entries =
+    let
+        combined : Dict Position Value
+        combined =
+            entries |> Dict.fromList |> Dict.union puzzle.initial
+
+        assessSquare : Position -> Value -> Bool
+        assessSquare pos val =
+            let
+                checkOnlyValInGroup : (Position -> List Position) -> Bool
+                checkOnlyValInGroup getGroup =
+                    (getGroup pos |> List.filterMap (\pp -> combined |> Dict.get pp) |> List.filter (\pp -> pp == val) |> List.length) == 1
+            in
+            checkOnlyValInGroup (getCol puzzle.rank) && checkOnlyValInGroup (getRow puzzle.rank) && checkOnlyValInGroup (getSq puzzle.rank)
+    in
+    case combined |> Dict.toList |> List.all (\( p, v ) -> assessSquare p v) of
+        True ->
+            case (combined |> Dict.size) == (puzzle.rank * puzzle.rank * puzzle.rank * puzzle.rank) of
+                True ->
+                    Correct
+
+                False ->
+                    PossiblyCorrect
+
+        False ->
+            Incorrect

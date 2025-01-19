@@ -8,10 +8,11 @@ import Element.Border as Border
 import Element.Input as Input
 import Html exposing (Html)
 import InputPad as I
+import Puzzles as P
 
 
 puzzle1 =
-    "160409800420001500005800043502708091000090000870103206930005600001900032004607015"
+    P.puzzles |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault ""
 
 
 type alias Model =
@@ -22,6 +23,7 @@ type alias Model =
     , input : I.Input
     , inputString : String
     , status : String
+    , assessment : B.Assessment
     }
 
 
@@ -36,6 +38,7 @@ initialModel =
             , input = I.newInput
             , inputString = ""
             , status = ""
+            , assessment = B.assess p []
             }
 
         Err e ->
@@ -46,6 +49,7 @@ initialModel =
             , input = I.newInput
             , inputString = ""
             , status = e
+            , assessment = B.Incorrect
             }
 
 
@@ -89,7 +93,7 @@ update msg model =
         ButtonMsg val ->
             case ( model.selectedSquare, val ) of
                 ( Just pos, I.Num i ) ->
-                    ( { model | entries = ( pos, i ) :: model.entries }, Cmd.none )
+                    ( { model | entries = ( pos, i ) :: model.entries, selectedSquare = Nothing }, Cmd.none )
 
                 ( _, I.Undo ) ->
                     case model.entries of
@@ -107,7 +111,14 @@ update msg model =
                         [] ->
                             ( model, Cmd.none )
 
-                _ ->
+                ( _, I.Assess ) ->
+                    let
+                        newAssessment =
+                            B.assess model.puzzle model.entries
+                    in
+                    ( { model | assessment = newAssessment }, Cmd.none )
+
+                ( _, _ ) ->
                     ( model, Cmd.none )
 
         BoardMsg pos ->
@@ -133,7 +144,7 @@ view model =
             [ B.renderBoard BoardMsg model.puzzle model.entries model.selectedSquare
             , I.renderInput ButtonMsg model.input
             ]
-        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text ]
+        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, Debug.toString model.assessment |> Element.text ]
         , Element.row [] [ Element.el [] loadButton ]
         ]
         |> Element.layout []
