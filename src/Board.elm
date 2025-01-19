@@ -1,6 +1,6 @@
 module Board exposing (..)
 
-import Dict exposing (Dict, map)
+import Dict exposing (Dict)
 import Element exposing (Element)
 import Svg
 import Svg.Attributes as Att
@@ -24,17 +24,26 @@ type alias Position =
     ( Row, Col )
 
 
-type Value
-    = ProblemValue Int
-    | UserValue Int
+type alias Value =
+    Int
 
 
 type alias Square =
-    ( Maybe Value, Shading )
+    ( Value, Shading )
 
 
 type alias Squares =
     Dict Position Square
+
+
+type alias Puzzle =
+    { initial : Dict Position Value
+    , rank : Int
+    }
+
+
+type alias Entry =
+    ( Position, Value )
 
 
 type alias Board =
@@ -50,19 +59,24 @@ type Shading
     | Heavy
 
 
-newBoard : Int -> Board
-newBoard rank =
-    let
-        b =
-            List.range 1 (rank * rank)
-                |> List.concatMap
-                    (\r ->
-                        List.range 1 (rank * rank)
-                            |> List.map (\c -> ( ( c, r ), ( Nothing, None ) ))
-                    )
-                |> Dict.fromList
-    in
-    { squares = b, selectedSquare = Nothing, rank = rank }
+type alias RenderStyle =
+    ( Shading, Shading )
+
+
+
+--newBoard : Int -> Board
+--newBoard rank =
+--    let
+--        b =
+--            List.range 1 (rank * rank)
+--                |> List.concatMap
+--                    (\r ->
+--                        List.range 1 (rank * rank)
+--                            |> List.map (\c -> ( ( c, r ), ( Nothing, None ) ))
+--                    )
+--                |> Dict.fromList
+--    in
+--    { squares = b, selectedSquare = Nothing, rank = rank }
 
 
 get : Position -> Board -> Maybe Square
@@ -75,114 +89,71 @@ add b p s =
     { b | squares = Dict.insert p s b.squares }
 
 
-importBoard : String -> Result String Board
-importBoard s =
+importPuzzle : String -> Result String Puzzle
+importPuzzle s =
     let
-        l =
+        rawValues : List Value
+        rawValues =
             s
                 |> String.filter Char.isDigit
                 |> String.toList
                 |> List.map String.fromChar
-                |> List.map String.toInt
-                |> List.map
-                    (\p ->
-                        case p of
-                            Just 0 ->
-                                Nothing
+                |> List.filterMap String.toInt
 
-                            _ ->
-                                p
-                    )
-
+        rank : Int
         rank =
-            l |> List.length |> toFloat |> sqrt |> sqrt |> truncate
+            rawValues |> List.length |> toFloat |> sqrt |> sqrt |> truncate
 
         indexToRC : Int -> ( Int, Int )
         indexToRC index =
             ( ((index - 1) // (rank * rank)) + 1, modBy (rank * rank) (index - 1) + 1 )
 
+        -- TODO update this to use indexMap or something
         idx =
-            List.length l |> List.range 1 |> List.map indexToRC
+            List.length rawValues |> List.range 1 |> List.map indexToRC
 
         pairs =
-            List.map2 (\a -> \b -> ( a, b )) idx l
+            List.map2 (\a -> \b -> ( a, b )) idx rawValues
 
+        isSquare : Bool
         isSquare =
-            (l |> List.length |> toFloat |> sqrt |> sqrt) == (rank |> toFloat) && (rank /= 0)
+            (rawValues |> List.length |> toFloat |> sqrt |> sqrt) == (rank |> toFloat) && (rank /= 0)
 
         pp =
             pairs
-                |> List.map
-                    (\( ( x, y ), v ) ->
+                |> List.filter
+                    (\( _, v ) ->
                         case v of
-                            Just value ->
-                                ( ( x, y ), ( Just (ProblemValue value), None ) )
+                            0 ->
+                                False
 
-                            Nothing ->
-                                ( ( x, y ), ( Nothing, None ) )
+                            _ ->
+                                True
                     )
                 |> Dict.fromList
     in
     if isSquare then
-        { squares = pp, selectedSquare = Nothing, rank = rank } |> Ok
+        { initial = pp, rank = rank } |> Ok
 
     else
         Err "Invalid board"
 
 
-shadeBoard : Position -> Int -> Squares -> Squares
-shadeBoard p rank s =
-    let
-        shadeSelected : Position -> Squares -> Squares
-        shadeSelected pp ss =
-            ss
-                |> Dict.map
-                    (\k ( v, shading ) ->
-                        ( v
-                        , if Just k == Just pp then
-                            Heavy
 
-                          else
-                            shading
-                        )
-                    )
-
-        shadePeers : Position -> Squares -> Squares
-        shadePeers pp ss =
-            let
-                peers =
-                    ss |> getPeers pp rank
-            in
-            ss
-                |> Dict.map
-                    (\k ( v, _ ) ->
-                        ( v
-                        , if List.member k peers then
-                            Light
-
-                          else
-                            None
-                        )
-                    )
-    in
-    s |> shadePeers p |> shadeSelected p
+--TODO change these to be rank based
 
 
-
--- |> shadeSelected p
-
-
-getRow : Int -> Squares -> List Position
+getRow : Int -> List Position -> List Position
 getRow r s =
-    s |> Dict.filter (\k -> \_ -> (k |> Tuple.first) == r) |> Dict.keys
+    s |> List.filter (\k -> (k |> Tuple.first) == r)
 
 
-getCol : Int -> Squares -> List Position
+getCol : Int -> List Position -> List Position
 getCol c s =
-    s |> Dict.filter (\k -> \_ -> (k |> Tuple.second) == c) |> Dict.keys
+    s |> List.filter (\k -> (k |> Tuple.second) == c)
 
 
-getSq : Position -> Int -> Squares -> List Position
+getSq : Position -> Int -> List Position -> List Position
 getSq ( r, c ) rank s =
     let
         base =
@@ -197,7 +168,7 @@ getSq ( r, c ) rank s =
     colNums |> List.concatMap (\cc -> rowNums |> List.map (\rr -> ( rr, cc )))
 
 
-getPeers : Position -> Int -> Squares -> List Position
+getPeers : Position -> Int -> List Position -> List Position
 getPeers ( r, c ) rank s =
     getCol c s ++ getRow r s ++ getSq ( r, c ) rank s
 
@@ -206,8 +177,8 @@ getPeers ( r, c ) rank s =
 -- Render a square on the board with the appropriate shading and value
 
 
-renderSquare : (Position -> msg) -> Position -> Square -> Svg.Svg msg
-renderSquare msgOnclick p ( v, s ) =
+renderSquare : (Position -> msg) -> Position -> ( Maybe Value, RenderStyle ) -> Svg.Svg msg
+renderSquare msgOnclick p ( v, r ) =
     let
         -- Offsets to make the values appear in the center of the square
         xTextOffset =
@@ -223,7 +194,7 @@ renderSquare msgOnclick p ( v, s ) =
             ((p |> Tuple.first) - 1) * 50
 
         backgroundColor =
-            case s of
+            case Tuple.second r of
                 Light ->
                     "#E0E0E0"
 
@@ -234,15 +205,15 @@ renderSquare msgOnclick p ( v, s ) =
                     "#ffffff"
 
         ( val, colour ) =
-            case v of
-                Just (ProblemValue vv) ->
+            case ( v, Tuple.first r ) of
+                ( Just vv, Heavy ) ->
                     ( String.fromInt vv, "black" )
 
-                Just (UserValue vv) ->
-                    ( String.fromInt vv, "gray" )
+                ( Just vv, Light ) ->
+                    ( String.fromInt vv, "grey" )
 
                 _ ->
-                    ( " ", "blue" )
+                    ( "", "black" )
     in
     Svg.svg []
         [ Svg.rect
@@ -299,8 +270,8 @@ renderLines rank size light heavy l =
     ]
 
 
-renderBoard : (Position -> msg) -> Board -> Element msg
-renderBoard msgOnclick b =
+renderBoard : (Position -> msg) -> Puzzle -> List Entry -> Maybe Position -> Element msg
+renderBoard msgOnclick puzzle entries selected =
     let
         -- edge of number box in pixels
         boxSize =
@@ -314,13 +285,64 @@ renderBoard msgOnclick b =
 
         -- edge of board in pixels
         boardSize =
-            b.rank * b.rank * boxSize
+            puzzle.rank * puzzle.rank * boxSize
+
+        styledSquares : Dict Position ( Maybe Value, RenderStyle )
+        styledSquares =
+            let
+                allSquares =
+                    List.range 1 (puzzle.rank * puzzle.rank)
+                        |> List.concatMap
+                            (\r ->
+                                List.range 1 (puzzle.rank * puzzle.rank)
+                                    |> List.map (\c -> ( ( c, r ), ( Nothing, ( None, None ) ) ))
+                            )
+                        |> Dict.fromList
+
+                problemSquares =
+                    puzzle.initial
+                        |> Dict.map (\_ v -> ( Just v, ( Heavy, None ) ))
+
+                userSquares =
+                    entries |> List.map (\( pp, v ) -> ( pp, ( Just v, ( Light, None ) ) )) |> Dict.fromList
+
+                shadeSquares : Position -> Dict Position ( Maybe Value, RenderStyle ) -> Dict Position ( Maybe Value, RenderStyle )
+                shadeSquares p ss =
+                    let
+                        peers =
+                            ss |> Dict.keys |> getPeers p puzzle.rank
+                    in
+                    Dict.map
+                        (\k ( v, shading ) ->
+                            ( v
+                            , if k == p then
+                                ( Tuple.first shading, Heavy )
+
+                              else if List.member k peers then
+                                ( Tuple.first shading, Light )
+
+                              else
+                                shading
+                            )
+                        )
+                        ss
+            in
+            allSquares
+                |> Dict.union problemSquares
+                |> Dict.union userSquares
+                |> (case selected of
+                        Just s ->
+                            shadeSquares s
+
+                        Nothing ->
+                            identity
+                   )
 
         board =
-            List.range 0 ((b.rank * b.rank) + 1)
+            List.range 0 ((puzzle.rank * puzzle.rank) + 1)
                 |> List.concatMap
-                    (renderLines b.rank boxSize lineWeight heavyLineWeight)
-                |> List.append (b.squares |> Dict.map (renderSquare msgOnclick) |> Dict.values)
+                    (renderLines puzzle.rank boxSize lineWeight heavyLineWeight)
+                |> List.append (styledSquares |> Dict.map (renderSquare msgOnclick) |> Dict.values)
                 |> Svg.g [ Att.transform ("translate(" ++ (lineWeight |> String.fromInt) ++ ", " ++ (lineWeight |> String.fromInt) ++ ")") ]
 
         viewbox =

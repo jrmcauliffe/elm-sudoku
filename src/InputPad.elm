@@ -8,6 +8,7 @@ import Element.Input as Input
 type Value
     = Num Int
     | Undo
+    | Redo
     | Nothing
 
 
@@ -27,7 +28,7 @@ renderInput msgOnClick input =
         -- Buttons in a phone keypad layout ordering
         vals : List Value
         vals =
-            Undo :: ([ 3, 2, 1, 6, 5, 4, 9, 8, 7 ] |> List.map Num) |> List.reverse
+            Redo :: Undo :: ([ 3, 2, 1, 6, 5, 4, 9, 8, 7 ] |> List.map Num) |> List.reverse
 
         buttonStyle =
             [ Element.padding 10
@@ -46,6 +47,9 @@ renderInput msgOnClick input =
 
                 Undo ->
                     Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "Undo" }
+
+                Redo ->
+                    Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "Redo" }
 
                 Nothing ->
                     Input.button buttonStyle { onPress = msgOnClick v |> Just, label = Element.text "" }

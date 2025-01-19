@@ -2,6 +2,7 @@ module Main exposing (..)
 
 import Board as B
 import Browser
+import Dict
 import Element exposing (..)
 import Element.Border as Border
 import Element.Input as Input
@@ -14,7 +15,10 @@ puzzle1 =
 
 
 type alias Model =
-    { board : B.Board
+    { puzzle : B.Puzzle
+    , entries : List B.Entry
+    , redos : List B.Entry
+    , selectedSquare : Maybe B.Position
     , input : I.Input
     , inputString : String
     , status : String
@@ -23,16 +27,22 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    case puzzle1 |> B.importBoard of
-        Ok b ->
-            { board = b
+    case puzzle1 |> B.importPuzzle of
+        Ok p ->
+            { puzzle = p
+            , entries = []
+            , redos = []
+            , selectedSquare = Nothing
             , input = I.newInput
             , inputString = ""
             , status = ""
             }
 
         Err e ->
-            { board = B.newBoard 9
+            { puzzle = { initial = Dict.empty, rank = 3 }
+            , entries = []
+            , redos = []
+            , selectedSquare = Nothing
             , input = I.newInput
             , inputString = ""
             , status = e
@@ -58,17 +68,17 @@ main =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    let
-        -- TODO A bit of a hack, investigate better way to do this
-        updateBoard : (B.Board -> B.Board) -> Model -> Model
-        updateBoard transform m =
-            { m | board = transform m.board }
-    in
+    --let
+    --    -- TODO A bit of a hack, investigate better way to do this
+    --    updateBoard : (B.Board -> B.Board) -> Model -> Model
+    --    updateBoard transform m =
+    --        { m | board = transform m.board }
+    --in
     case msg of
         SolveMsg ->
-            case model.inputString |> B.importBoard of
-                Ok b ->
-                    ( { model | board = b, status = "Success!" }, Cmd.none )
+            case model.inputString |> B.importPuzzle of
+                Ok p ->
+                    ( { model | puzzle = p, status = "Success!" }, Cmd.none )
 
                 Err e ->
                     ( { model | status = e }, Cmd.none )
@@ -77,9 +87,25 @@ update msg model =
             ( { model | inputString = status }, Cmd.none )
 
         ButtonMsg val ->
-            case ( model.board.selectedSquare, val ) of
+            case ( model.selectedSquare, val ) of
                 ( Just pos, I.Num i ) ->
-                    ( updateBoard (\b -> B.add b pos ( Just (B.UserValue i), B.None )) model, Cmd.none )
+                    ( { model | entries = ( pos, i ) :: model.entries }, Cmd.none )
+
+                ( _, I.Undo ) ->
+                    case model.entries of
+                        e :: es ->
+                            ( { model | entries = es, redos = e :: model.redos, selectedSquare = Nothing }, Cmd.none )
+
+                        [] ->
+                            ( model, Cmd.none )
+
+                ( _, I.Redo ) ->
+                    case model.redos of
+                        r :: rs ->
+                            ( { model | redos = rs, entries = r :: model.entries, selectedSquare = Nothing }, Cmd.none )
+
+                        [] ->
+                            ( model, Cmd.none )
 
                 _ ->
                     ( model, Cmd.none )
@@ -88,15 +114,14 @@ update msg model =
             let
                 -- Only allow user squares to be selected
                 newSelected =
-                    case model.board |> B.get pos of
-                        Just ( Just (B.ProblemValue _), _ ) ->
+                    case model.puzzle.initial |> Dict.member pos of
+                        True ->
                             Nothing
 
-                        _ ->
+                        False ->
                             Just pos
             in
-            ( updateBoard (\b -> { b | selectedSquare = newSelected }) model
-                |> updateBoard (\b -> { b | squares = b.squares |> B.shadeBoard pos b.rank })
+            ( { model | selectedSquare = newSelected }
             , Cmd.none
             )
 
@@ -104,7 +129,10 @@ update msg model =
 view : Model -> Html Msg
 view model =
     Element.column [ Element.width Element.fill, Element.spacing 20, Element.padding 25 ]
-        [ Element.row [] [ B.renderBoard BoardMsg model.board, I.renderInput ButtonMsg model.input ]
+        [ Element.row []
+            [ B.renderBoard BoardMsg model.puzzle model.entries model.selectedSquare
+            , I.renderInput ButtonMsg model.input
+            ]
         , Element.row [] [ Element.el [] gameInput, model.status |> Element.text ]
         , Element.row [] [ Element.el [] loadButton ]
         ]
