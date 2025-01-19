@@ -356,38 +356,3 @@ renderBoard msgOnclick puzzle entries selected =
             , viewbox |> Att.viewBox
             ]
         |> Element.html
-
-
-type Assessment
-    = Incorrect
-    | PossiblyCorrect
-    | Correct
-
-
-assess : Puzzle -> List Entry -> Assessment
-assess puzzle entries =
-    let
-        combined : Dict Position Value
-        combined =
-            entries |> Dict.fromList |> Dict.union puzzle.initial
-
-        assessSquare : Position -> Value -> Bool
-        assessSquare pos val =
-            let
-                checkOnlyValInGroup : (Position -> List Position) -> Bool
-                checkOnlyValInGroup getGroup =
-                    (getGroup pos |> List.filterMap (\pp -> combined |> Dict.get pp) |> List.filter (\pp -> pp == val) |> List.length) == 1
-            in
-            checkOnlyValInGroup (getCol puzzle.rank) && checkOnlyValInGroup (getRow puzzle.rank) && checkOnlyValInGroup (getSq puzzle.rank)
-    in
-    case combined |> Dict.toList |> List.all (\( p, v ) -> assessSquare p v) of
-        True ->
-            case (combined |> Dict.size) == (puzzle.rank * puzzle.rank * puzzle.rank * puzzle.rank) of
-                True ->
-                    Correct
-
-                False ->
-                    PossiblyCorrect
-
-        False ->
-            Incorrect
