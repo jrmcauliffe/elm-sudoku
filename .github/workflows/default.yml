@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v1.2
+        uses: mpizenberg/elm-tooling-action@v1.6
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
       - run: elm make src/Main.elm
