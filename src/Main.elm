@@ -9,6 +9,7 @@ import Element.Input as Input
 import Html exposing (Html)
 import InputPad as I
 import Puzzles as P
+import Solver as S
 
 
 puzzle1 =
@@ -23,7 +24,7 @@ type alias Model =
     , input : I.Input
     , inputString : String
     , status : String
-    , assessment : B.Assessment
+    , assessment : S.Assessment
     }
 
 
@@ -38,7 +39,7 @@ initialModel =
             , input = I.newInput
             , inputString = ""
             , status = ""
-            , assessment = B.assess p []
+            , assessment = S.assess p []
             }
 
         Err e ->
@@ -49,7 +50,7 @@ initialModel =
             , input = I.newInput
             , inputString = ""
             , status = e
-            , assessment = B.Incorrect
+            , assessment = S.assess { initial = Dict.empty, rank = 3 } []
             }
 
 
@@ -72,12 +73,6 @@ main =
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
-    --let
-    --    -- TODO A bit of a hack, investigate better way to do this
-    --    updateBoard : (B.Board -> B.Board) -> Model -> Model
-    --    updateBoard transform m =
-    --        { m | board = transform m.board }
-    --in
     case msg of
         SolveMsg ->
             case model.inputString |> B.importPuzzle of
@@ -114,7 +109,7 @@ update msg model =
                 ( _, I.Assess ) ->
                     let
                         newAssessment =
-                            B.assess model.puzzle model.entries
+                            S.assess model.puzzle model.entries
                     in
                     ( { model | assessment = newAssessment }, Cmd.none )
 
@@ -139,12 +134,25 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
+    let
+        renderAssessment : S.Assessment -> String
+        renderAssessment assessment =
+            case assessment of
+                S.Incorrect ->
+                    "Incorrect"
+
+                S.PossiblyCorrect ->
+                    "Possibly Correct"
+
+                S.Correct ->
+                    "Correct"
+    in
     Element.column [ Element.width Element.fill, Element.spacing 20, Element.padding 25 ]
         [ Element.row []
             [ B.renderBoard BoardMsg model.puzzle model.entries model.selectedSquare
             , I.renderInput ButtonMsg model.input
             ]
-        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, Debug.toString model.assessment |> Element.text ]
+        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, model.assessment |> renderAssessment |> Element.text ]
         , Element.row [] [ Element.el [] loadButton ]
         ]
         |> Element.layout []
