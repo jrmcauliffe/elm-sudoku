@@ -199,7 +199,7 @@ renderSquare msgOnclick p ( v, r ) =
                     "#E0E0E0"
 
                 Heavy ->
-                    "#A00000"
+                    "#A0A0A0"
 
                 _ ->
                     "#ffffff"
