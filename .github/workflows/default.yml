@@ -36,10 +36,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ap-southeast-2
-
+          aws-region: ${{ secrets.AWS_REGION }}
       - name: Build
         run: elm make --optimize src/Main.elm
 
       - name: Deploy to website
-        run: aws s3 cp index.html s3://www.birchavenue.org/projects/sudoku/
+        run: aws s3 cp index.html ${{ secrets.S3_BUCKET_PATH }}
+
+      - name: Invalidate CloudFront Cache
+        run: aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths '/projects/sudoku/*'
