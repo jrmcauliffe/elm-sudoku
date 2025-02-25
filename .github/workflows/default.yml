@@ -23,8 +23,8 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v4
 
-      - name: Build Elm artifact
-        uses: jorelali/setup-elm@v6
+      - name: Install elm, elm-format and cache the ELM_HOME directory
+        uses: mpizenberg/elm-tooling-action@v1.2
         with:
-          elm-version: 0.19.1
+          cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
       - run: elm make src/Main.elm
