@@ -15,6 +15,7 @@ suite =
             [ test "Any value is valid in empty board" <|
                 \_ ->
                     True |> Expect.equal True
+
             --, test "Cannot add existing value to local square" <|
             --    \_ ->
             --        let
@@ -36,5 +37,5 @@ suite =
             --                B.add B.empty ( 1, 1 ) 1
             --        in
             --        Solver.isValid b ( 9, 1 ) 1 |> Expect.equal False
-            --]
+            ]
         ]
