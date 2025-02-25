@@ -39,6 +39,31 @@ assess puzzle entries =
             Incorrect
 
 
+solve : Puzzle -> ( Puzzle, List Entry )
+solve p =
+    ( p, [] )
+
+
+type alias SolveState =
+    Dict Position (List Value)
+
+
+initSolveState : Puzzle -> SolveState
+initSolveState p =
+    let
+        -- List of all possible values for a square
+        extent : List Value
+        extent =
+            p.rank * p.rank |> List.range 1
+
+        -- Total solution space
+        keys : SolveState
+        keys =
+            extent |> List.concatMap (\x -> extent |> List.map (\y -> ( ( x, y ), List.range 1 p.rank ))) |> Dict.fromList
+    in
+    keys |> Dict.union (p.initial |> Dict.map (\_ v -> [ v ]))
+
+
 
 --import Board exposing (..)
 --import Dict
