@@ -1,4 +1,4 @@
-module Solver exposing (Assessment, assess)
+module Solver exposing (Assessment(..), assess)
 
 import Board exposing (Board, Entry, Position, Puzzle, Value, getCol, getRow, getSq)
 import Dict exposing (Dict)

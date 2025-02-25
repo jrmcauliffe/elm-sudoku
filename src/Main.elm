@@ -134,12 +134,25 @@ update msg model =
 
 view : Model -> Html Msg
 view model =
+    let
+        renderAssessment : S.Assessment -> String
+        renderAssessment assessment =
+            case assessment of
+                S.Incorrect ->
+                    "Incorrect"
+
+                S.PossiblyCorrect ->
+                    "Possibly Correct"
+
+                S.Correct ->
+                    "Correct"
+    in
     Element.column [ Element.width Element.fill, Element.spacing 20, Element.padding 25 ]
         [ Element.row []
             [ B.renderBoard BoardMsg model.puzzle model.entries model.selectedSquare
             , I.renderInput ButtonMsg model.input
             ]
-        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, Debug.toString model.assessment |> Element.text ]
+        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, model.assessment |> renderAssessment |> Element.text ]
         , Element.row [] [ Element.el [] loadButton ]
         ]
         |> Element.layout []
