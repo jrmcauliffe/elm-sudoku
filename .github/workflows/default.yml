@@ -27,4 +27,4 @@ jobs:
         uses: mpizenberg/elm-tooling-action@v1.6
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
-      - run: elm make src/Main.elm
+      - run: elm-test tests/*
