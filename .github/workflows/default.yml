@@ -25,7 +25,7 @@ jobs:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
       - name: Run Tests
-        run: elm-test-rs tests/*
+        run: elm-test-rs tests/* >> $GITHUB_STEP_SUMMARY
 
   deploy:
     needs: [test]
