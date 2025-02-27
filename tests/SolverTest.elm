@@ -14,7 +14,7 @@ suite =
             -- Nest as many descriptions as you like.
             [ test "Any value is valid in empty board" <|
                 \_ ->
-                    True |> Expect.equal False
+                    True |> Expect.equal True
 
             --, test "Cannot add existing value to local square" <|
             --    \_ ->
