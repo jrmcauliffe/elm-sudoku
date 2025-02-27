@@ -28,6 +28,7 @@ jobs:
         run: elm-test-rs tests/*
 
   deploy:
+    needs: [test]
     runs-on: ubuntu-latest
 
     steps:
