@@ -9,11 +9,8 @@ import Element.Input as Input
 import Html exposing (Html)
 import InputPad as I
 import Puzzles as P
+import Random
 import Solver as S
-
-
-puzzle1 =
-    P.puzzles |> List.head |> Maybe.map Tuple.first |> Maybe.withDefault ""
 
 
 type alias Model =
@@ -30,28 +27,15 @@ type alias Model =
 
 initialModel : Model
 initialModel =
-    case puzzle1 |> B.importPuzzle of
-        Ok p ->
-            { puzzle = p
-            , entries = []
-            , redos = []
-            , selectedSquare = Nothing
-            , input = I.newInput
-            , inputString = ""
-            , status = ""
-            , assessment = S.assess p []
-            }
-
-        Err e ->
-            { puzzle = { initial = Dict.empty, rank = 3 }
-            , entries = []
-            , redos = []
-            , selectedSquare = Nothing
-            , input = I.newInput
-            , inputString = ""
-            , status = e
-            , assessment = S.assess { initial = Dict.empty, rank = 3 } []
-            }
+    { puzzle = { initial = Dict.empty, rank = 3 }
+    , entries = []
+    , redos = []
+    , selectedSquare = Nothing
+    , input = I.newInput
+    , inputString = ""
+    , status = "Loading puzzle..."
+    , assessment = S.assess { initial = Dict.empty, rank = 3 } []
+    }
 
 
 type Msg
@@ -59,12 +43,17 @@ type Msg
     | TextMsg String
     | ButtonMsg I.Value
     | BoardMsg B.Position
+    | NewPuzzle Int
 
 
 main : Program () Model Msg
 main =
     Browser.element
-        { init = \_ -> ( initialModel, Cmd.none )
+        { init =
+            \_ ->
+                ( initialModel
+                , Random.generate NewPuzzle (Random.int 0 (List.length P.puzzles - 1))
+                )
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.none
@@ -130,6 +119,22 @@ update msg model =
             ( { model | selectedSquare = newSelected }
             , Cmd.none
             )
+
+        NewPuzzle index ->
+            let
+                puzzleString =
+                    P.puzzles
+                        |> List.drop index
+                        |> List.head
+                        |> Maybe.map Tuple.first
+                        |> Maybe.withDefault ""
+            in
+            case puzzleString |> B.importPuzzle of
+                Ok p ->
+                    ( { model | puzzle = p, status = "" }, Cmd.none )
+
+                Err e ->
+                    ( { model | status = e }, Cmd.none )
 
 
 view : Model -> Html Msg
