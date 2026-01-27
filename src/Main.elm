@@ -147,7 +147,7 @@ view model =
                     "Incorrect"
 
                 S.PossiblyCorrect ->
-                    "Possibly Correct!"
+                    "Possibly Correct"
 
                 S.Correct ->
                     "Correct"
