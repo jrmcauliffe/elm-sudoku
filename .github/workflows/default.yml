@@ -11,6 +11,11 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+  # Required for OIDC token
+  permissions:
+    id-token: write
+    contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -43,9 +48,9 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-website-deploy
           aws-region: ${{ vars.AWS_REGION }}
+
       - name: Build
         run: elm make --optimize src/Main.elm
 
