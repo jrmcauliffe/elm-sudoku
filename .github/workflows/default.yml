@@ -19,10 +19,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v1.6
+        uses: mpizenberg/elm-tooling-action@v1.7
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
@@ -36,15 +36,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v1.6
+        uses: mpizenberg/elm-tooling-action@v1.7
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-elm-sudoku-prod-deploy
           aws-region: ${{ vars.AWS_REGION }}
