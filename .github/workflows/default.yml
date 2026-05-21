@@ -13,6 +13,12 @@ permissions:
   id-token: write
   contents: read
 
+# Force JS actions to run on Node 24 — mpizenberg/elm-tooling-action still
+# declares node20. Can drop once that action (or its replacement) supports
+# node24, or after GitHub's forced switchover.
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 jobs:
   test:
     runs-on: ubuntu-latest
