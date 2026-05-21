@@ -32,6 +32,7 @@ jobs:
   deploy:
     needs: [test]
     runs-on: ubuntu-latest
+    environment: prod
 
     steps:
       - name: Checkout repository
@@ -43,9 +44,9 @@ jobs:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-elm-sudoku-deploy
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-elm-sudoku-prod-deploy
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Build
