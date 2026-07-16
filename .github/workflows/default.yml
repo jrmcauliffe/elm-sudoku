@@ -28,7 +28,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v1.7
+        uses: mpizenberg/elm-tooling-action@v1.20.0
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
@@ -45,7 +45,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v1.7
+        uses: mpizenberg/elm-tooling-action@v1.20.0
         with:
           cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
 
