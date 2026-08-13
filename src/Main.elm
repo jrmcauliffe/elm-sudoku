@@ -144,7 +144,7 @@ view model =
         renderAssessment assessment =
             case assessment of
                 S.Incorrect ->
-                    "Incorrect>"
+                    "Incorrect"
 
                 S.PossiblyCorrect ->
                     "Possibly Correct"
