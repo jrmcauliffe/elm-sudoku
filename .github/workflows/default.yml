@@ -13,12 +13,6 @@ permissions:
   id-token: write
   contents: read
 
-# Force JS actions to run on Node 24 — mpizenberg/elm-tooling-action still
-# declares node20. Can drop once that action (or its replacement) supports
-# node24, or after GitHub's forced switchover.
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -27,13 +21,44 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v2.1.0
+      - uses: actions/setup-node@v6
         with:
-          cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          node-version: 24
+
+      # Re-use node_modules between runs until package.json or package-lock.json changes.
+      - name: Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node_modules-${{ hashFiles('package.json', 'package-lock.json') }}
+
+      # Re-use ~/.elm between runs until elm.json or elm-tooling.json changes.
+      # The Elm compiler saves downloaded Elm packages there, and elm-tooling
+      # saves downloaded tool executables there.
+      - name: Cache ~/.elm
+        uses: actions/cache@v6
+        with:
+          path: ~/.elm
+          key: elm-${{ hashFiles('elm.json', 'elm-tooling.json') }}
+
+      # `npm ci` removes node_modules before running, so skip it when the cache
+      # was restored. NO_ELM_TOOLING_INSTALL turns the postinstall script into a
+      # no-op — the next step handles that, since elm-tooling.json and
+      # package-lock.json can change independently.
+      - name: Install npm packages
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+        run: npm ci --no-audit
+
+      # Always run, to be sure node_modules/.bin has links to every tool. It is
+      # fast when there is nothing new to download.
+      - name: Install tools from elm-tooling.json
+        run: npx elm-tooling install
 
       - name: Run Tests
-        run: elm-test-rs tests/* >> $GITHUB_STEP_SUMMARY
+        run: npx elm-test-rs tests/* >> $GITHUB_STEP_SUMMARY
 
   deploy:
     needs: [test]
@@ -44,10 +69,31 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Install elm, elm-format and cache the ELM_HOME directory
-        uses: mpizenberg/elm-tooling-action@v2.1.0
+      - uses: actions/setup-node@v6
         with:
-          cache-key: elm-home-${{ hashFiles('elm-tooling.json', 'elm.json') }}
+          node-version: 24
+
+      - name: Cache node_modules
+        id: cache-node_modules
+        uses: actions/cache@v6
+        with:
+          path: node_modules
+          key: node_modules-${{ hashFiles('package.json', 'package-lock.json') }}
+
+      - name: Cache ~/.elm
+        uses: actions/cache@v6
+        with:
+          path: ~/.elm
+          key: elm-${{ hashFiles('elm.json', 'elm-tooling.json') }}
+
+      - name: Install npm packages
+        if: steps.cache-node_modules.outputs.cache-hit != 'true'
+        env:
+          NO_ELM_TOOLING_INSTALL: 1
+        run: npm ci --no-audit
+
+      - name: Install tools from elm-tooling.json
+        run: npx elm-tooling install
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6
@@ -56,7 +102,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
 
       - name: Build
-        run: elm make --optimize src/Main.elm
+        run: npx elm make --optimize src/Main.elm
 
       - name: Deploy to website
         run: aws s3 cp index.html s3://${{ vars.S3_BUCKET }}${{ vars.S3_BUCKET_PATH }}
