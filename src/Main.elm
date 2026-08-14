@@ -157,8 +157,9 @@ view model =
             [ B.renderBoard BoardMsg model.puzzle model.entries model.selectedSquare
             , I.renderInput ButtonMsg model.input
             ]
-        , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, model.assessment |> renderAssessment |> Element.text ]
-        , Element.row [] [ Element.el [] loadButton ]
+
+        -- , Element.row [] [ Element.el [] gameInput, model.status |> Element.text, model.assessment |> renderAssessment |> Element.text ]
+        -- , Element.row [] [ Element.el [] loadButton ]
         ]
         |> Element.layout []
 
