@@ -101,11 +101,15 @@ jobs:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github-actions-elm-sudoku-prod-deploy
           aws-region: ${{ vars.AWS_REGION }}
 
+      # Output must match the <script src> in index.html and the "output" in
+      # elm-watch.json, so local dev and prod load the same path.
       - name: Build
-        run: npx elm make --optimize src/Main.elm
+        run: npx elm make --optimize src/Main.elm --output build/main.js
 
       - name: Deploy to website
-        run: aws s3 cp index.html s3://${{ vars.S3_BUCKET }}${{ vars.S3_BUCKET_PATH }}
+        run: |
+          aws s3 cp index.html s3://${{ vars.S3_BUCKET }}${{ vars.S3_BUCKET_PATH }}
+          aws s3 cp build/main.js s3://${{ vars.S3_BUCKET }}${{ vars.S3_BUCKET_PATH }}build/main.js
 
       - name: Invalidate CloudFront Cache
         run: aws cloudfront create-invalidation --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} --paths '${{ vars.S3_BUCKET_PATH }}*'

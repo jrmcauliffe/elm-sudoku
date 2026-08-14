@@ -4,6 +4,7 @@
     "postinstall": "elm-tooling install"
   },
   "devDependencies": {
-    "elm-tooling": "^1.20.0"
+    "elm-tooling": "^1.20.0",
+    "elm-watch": "^1.2.8"
   }
 }
